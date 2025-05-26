@@ -20,3 +20,15 @@ class AppointmentRead(BaseModel):
 
     class Config:
         orm_mode = True
+
+class AppointmentList(BaseModel):
+    id: int
+    name: str
+    phone_number: str
+    barber_id: int
+    service_id: int
+    total_duration: int
+    total_price: str
+
+    class Config:
+        orm_mode = True

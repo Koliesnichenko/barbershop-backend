@@ -20,3 +20,7 @@ def create_appointment(db: Session, data: schemas.AppointmentCreate) -> models.A
     db.commit()
     db.refresh(appointment)
     return appointment
+
+
+def get_appointment_by_barber(db: Session, barber_id: int) -> list[models.Appointment]:
+    return db.query(models.Appointment).filter(models.Appointment.barber_id == barber_id).all()
