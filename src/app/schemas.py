@@ -11,15 +11,18 @@ class AppointmentCreate(BaseModel):
     total_duration: int = Field(..., alias="totalDuration")
     total_price: str = Field(..., alias="totalPrice")
 
-    class Config:
-        allow_population_by_field_name = True
+    model_config = {
+        "validate_by_name": True
+    }
 
 
 class AppointmentRead(BaseModel):
     id: int
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
+
 
 class AppointmentList(BaseModel):
     id: int
@@ -30,5 +33,6 @@ class AppointmentList(BaseModel):
     total_duration: int
     total_price: str
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }

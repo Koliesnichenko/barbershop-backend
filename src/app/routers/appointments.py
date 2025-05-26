@@ -24,3 +24,10 @@ def get_appointments_by_barber(barber_id: int, db: Session = Depends(get_db)):
         return crud.get_appointment_by_barber(db, barber_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{appointment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_appointment(appointment_id: int, db: Session = Depends(get_db)):
+    success = crud.delete_appointment(db, appointment_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Appointment not found")
