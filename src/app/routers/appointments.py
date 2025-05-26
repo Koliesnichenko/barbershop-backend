@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from src.app.schemas import AppointmentCreate, AppointmentRead
 from src.app.database import get_db
 from src.app import crud
 from typing import List
-from src.app.schemas import AppointmentList
+from src.app.schemas.appointment import AppointmentCreate, AppointmentRead, AppointmentList
 
 router = APIRouter()
 

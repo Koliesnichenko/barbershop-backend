@@ -9,7 +9,8 @@ from alembic import context
 
 from src.app.database import Base
 
-from src.app import models
+from src.app.models.appointment import Appointment, Addon
+from src.app.models import user
 
 load_dotenv()
 
@@ -24,8 +25,6 @@ target_metadata = Base.metadata
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
-
-
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
