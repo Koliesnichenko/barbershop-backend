@@ -21,7 +21,7 @@ def register_user(data: UserRegister, db: Session = Depends(get_db)):
     )
     db.add(new_user)
     db.commit()
-    return {"message": "User created"}
+    return {"message": "User created", "user_id": new_user.id}
 
 
 @router.post("/login", response_model=Token)

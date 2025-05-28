@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 from src.app.database import Base
 
 appointments_addons = Table(
-    "appointments_addons",
+    "appointment_addon",
     Base.metadata,
     Column("appointment_id", ForeignKey("appointments.id"), primary_key=True),
     Column("addon_id", ForeignKey("addons.id"), primary_key=True),
