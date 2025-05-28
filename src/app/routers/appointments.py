@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from src.app.crud import appointment
+from src.app.crud import appointment as appointment_crud
 from src.app.database import get_db
 from src.app.crud.appointment import create_appointment, get_appointment_by_barber
 from typing import List
@@ -29,6 +29,6 @@ def get_appointments_by_barber(barber_id: int, db: Session = Depends(get_db)):
 
 @router.delete("/{appointment_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_appointment(appointment_id: int, db: Session = Depends(get_db)):
-    success = appointment.delete_appointment(db, appointment_id)
+    success = appointment_crud.delete_appointment(db, appointment_id)
     if not success:
         raise HTTPException(status_code=404, detail="Appointment not found")
