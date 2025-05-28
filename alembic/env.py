@@ -11,6 +11,9 @@ from src.app.database import Base
 
 from src.app.models.appointment import Appointment, Addon
 from src.app.models.user import User
+from src.app.models.barber import Barber
+from src.app.models.service import Service
+from src.app.models.barber_service_link import barber_service
 
 load_dotenv()
 
