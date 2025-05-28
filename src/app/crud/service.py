@@ -20,6 +20,16 @@ def get_service(db: Session, service_id: int):
     return db.query(Service).filter(Service.id == service_id).first()
 
 
+def update_service(db: Session, service_id: int, updated_data: ServiceBase):
+    service = get_service(db, service_id)
+    if service:
+        for key, value in updated_data.model_dump().items():
+            setattr(service, key, value)
+        db.commit()
+        db.refresh(service)
+    return service
+
+
 def delete_service(db: Session, service_id: int):
     service = get_service(db, service_id)
     if service:
