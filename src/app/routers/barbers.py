@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.app.database import get_db
 from src.app.crud import barber as crud
-from src.app.schemas.barber import BarberCreate, BarberRead, BarberBase
+from src.app.schemas.barber import BarberCreate, BarberRead, BarberBase, AssignServices
 from typing import List
 
 router = APIRouter(tags=["Barbers"])
@@ -30,3 +30,12 @@ def update_barber(barber_id: int, updated_data: BarberBase, db: Session = Depend
 def delete_barber(barber_id: int, db: Session = Depends(get_db)):
     if not crud.delete_barber(db=db, barber_id=barber_id):
         raise HTTPException(status_code=404, detail="Barber not found")
+
+
+@router.post("/{barber_id}/service", response_model=BarberRead)
+def assign_services(barber_id: int, payload: AssignServices, db: Session = Depends(get_db)):
+    result = crud.assign_services_to_barber(db, barber_id, payload.service_ids)
+    if not result:
+        raise HTTPException(status_code=404, detail="Barber not found or invalid service IDs")
+    return result
+

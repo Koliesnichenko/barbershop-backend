@@ -1,6 +1,8 @@
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel
+
+from src.app.schemas.service import ServiceRead
 
 
 class BarberBase(BaseModel):
@@ -18,3 +20,7 @@ class BarberRead(BarberBase):
     model_config = {
         "from_attributes": True
     }
+
+
+class AssignServices(BaseModel):
+    service_ids: List[int]
