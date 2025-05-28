@@ -36,3 +36,30 @@ class AppointmentList(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+
+class AddonsOut(BaseModel):
+    id: int
+    name: str
+    duration: int
+    price: int
+    category: str
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
+class AppointmentReadDetailed(BaseModel):
+    id: int
+    name: str
+    phone_number: str
+    barber_id: int
+    service_id: int
+    total_duration: int
+    total_price: str
+    addons: List[AddonsOut]
+
+    model_config = {
+        "from_attributes": True
+    }

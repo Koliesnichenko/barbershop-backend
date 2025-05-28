@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from src.app.database import get_db
 from src.app import crud
 from typing import List
-from src.app.schemas.appointment import AppointmentCreate, AppointmentRead, AppointmentList
+from src.app.schemas.appointment import AppointmentCreate, AppointmentRead, AppointmentList, AppointmentReadDetailed
 
 router = APIRouter()
 
@@ -17,7 +17,7 @@ def create_appointment(appointment: AppointmentCreate, db: Session = Depends(get
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/barber/{barber_id}", response_model=List[AppointmentList])
+@router.get("/barber/{barber_id}", response_model=List[AppointmentReadDetailed])
 def get_appointments_by_barber(barber_id: int, db: Session = Depends(get_db)):
     try:
         return crud.get_appointment_by_barber(db, barber_id)
