@@ -8,8 +8,8 @@ class AppointmentCreate(BaseModel):
     barber_id: int = Field(..., alias="barberId")
     service_id: int = Field(..., alias="serviceId")
     addon_ids: List[int] = Field(..., alias="addonIds")
-    total_duration: int = Field(..., alias="totalDuration")
-    total_price: str = Field(..., alias="totalPrice")
+    # total_duration: int = Field(..., alias="totalDuration")
+    # total_price: int = Field(..., alias="totalPrice")
 
     model_config = {
         "validate_by_name": True
@@ -31,7 +31,7 @@ class AppointmentList(BaseModel):
     barber_id: int
     service_id: int
     total_duration: int
-    total_price: str
+    total_price: int
 
     model_config = {
         "from_attributes": True
@@ -57,7 +57,7 @@ class AppointmentReadDetailed(BaseModel):
     barber_id: int
     service_id: int
     total_duration: int
-    total_price: str
+    total_price: int
     addons: List[AddonsOut]
 
     model_config = {
@@ -65,15 +65,18 @@ class AppointmentReadDetailed(BaseModel):
     }
 
 
-class AppointmentsResponse(BaseModel):
+class AppointmentResponse(BaseModel):
     id: int
     name: str
     phone_number: str
     barber_id: int
+    barber_name: str
     service_id: int
-    addons_id: List[int]
+    service_name: str
+    addons: List[AddonsOut]
     total_duration: int
-    total_price: str
+    total_price: int
+
     model_config = {
         "from_attributes": True
     }
