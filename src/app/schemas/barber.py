@@ -2,8 +2,6 @@ from typing import Optional, List
 
 from pydantic import BaseModel
 
-from src.app.schemas.service import ServiceRead
-
 
 class BarberBase(BaseModel):
     name: str

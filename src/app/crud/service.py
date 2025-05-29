@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from src.app.models.service import Service
-from src.app.schemas.service import ServiceCreate
+from src.app.schemas.service import ServiceCreate, ServiceBase
 
 
 def create_service(db: Session, service: ServiceCreate):

@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from src.app.routers import appointments
+from src.app.routers import barbers, services, appointments
 from src.app.auth.router import router as auth_router
 from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,6 +16,8 @@ app.add_middleware(
 
 app.include_router(appointments.router, prefix="/api/appointments", tags=["Appointments"])
 app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
+app.include_router(services.router, prefix="/api/services", tags=["Services"])
+app.include_router(barbers.router, prefix="/api/barbers", tags=["Barbers"])
 
 
 def custom_openapi():

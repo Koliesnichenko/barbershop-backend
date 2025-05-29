@@ -20,7 +20,7 @@ class Appointment(Base):
     barber_id: Mapped[int] = mapped_column()
     service_id: Mapped[int] = mapped_column()
     total_duration: Mapped[int] = mapped_column()
-    total_price: Mapped[str] = mapped_column()
+    total_price: Mapped[int] = mapped_column()
 
     addons = relationship("Addon", secondary=appointments_addons, back_populates="appointments")
 

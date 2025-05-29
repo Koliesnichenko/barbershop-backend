@@ -63,3 +63,17 @@ class AppointmentReadDetailed(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+
+class AppointmentsResponse(BaseModel):
+    id: int
+    name: str
+    phone_number: str
+    barber_id: int
+    service_id: int
+    addons_id: List[int]
+    total_duration: int
+    total_price: str
+    model_config = {
+        "from_attributes": True
+    }
