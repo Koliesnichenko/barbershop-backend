@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.app.database import get_db
 from src.app.crud import barber as crud
-from src.app.schemas.barber import BarberCreate, BarberRead, BarberBase, AssignServices
+from src.app.schemas.barber import BarberCreate, BarberRead, BarberBase, AssignServices, BarberUpdate
 from typing import List
 
 router = APIRouter(tags=["Barbers"])
@@ -19,7 +19,7 @@ def get_all_barbers(db: Session = Depends(get_db)):
 
 
 @router.put("/{barber_id}", response_model=BarberRead)
-def update_barber(barber_id: int, updated_data: BarberBase, db: Session = Depends(get_db)):
+def update_barber(barber_id: int, updated_data: BarberUpdate, db: Session = Depends(get_db)):
     result = crud.update_barber(db=db, barber_id=barber_id, updated_data=updated_data)
     if not result:
         raise HTTPException(status_code=404, detail="Barber not found")

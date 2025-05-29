@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from src.app.models.service import Service
-from src.app.schemas.service import ServiceCreate, ServiceBase
+from src.app.schemas.service import ServiceCreate, ServiceBase, ServiceUpdate
 
 
 def create_service(db: Session, service: ServiceCreate):
@@ -20,7 +20,7 @@ def get_service(db: Session, service_id: int):
     return db.query(Service).filter(Service.id == service_id).first()
 
 
-def update_service(db: Session, service_id: int, updated_data: ServiceBase):
+def update_service(db: Session, service_id: int, updated_data: ServiceUpdate):
     service = get_service(db, service_id)
     if service:
         for key, value in updated_data.model_dump().items():

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -22,3 +22,10 @@ class ServiceRead(ServiceBase):
     model_config = {
         "from_attributes": True
     }
+
+
+class ServiceUpdate(ServiceBase):
+    name: Optional[str] = None
+    duration: Optional[int] = None
+    price: Optional[int] = None
+    category: Optional[str] = None
