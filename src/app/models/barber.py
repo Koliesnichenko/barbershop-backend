@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from src.app.models.barber_service_link import barber_service
 
 from src.app.database import Base
 

@@ -11,4 +11,3 @@ class User(Base):
     email: Mapped[str] = mapped_column(unique=True, index=True)
     phone_number: Mapped[str] = mapped_column(unique=True, nullable=True)
     hashed_password: Mapped[str] = mapped_column()
-
