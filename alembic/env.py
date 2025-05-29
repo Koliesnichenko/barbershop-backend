@@ -9,11 +9,14 @@ from alembic import context
 
 from src.app.database import Base
 
-from src.app.models.appointment import Appointment, Addon
+from src.app.models.addon import Addon
+from src.app.models.appointment import Appointment
 from src.app.models import user
 from src.app.models.barber import Barber
 from src.app.models.service import Service
 from src.app.models.barber_service_link import barber_service
+from src.app.models.appointment_addon_link import appointment_addon
+from src.app.models.barber_addon_link import barber_addon
 
 load_dotenv()
 

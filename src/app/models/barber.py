@@ -1,4 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from src.app.models.barber_addon_link import barber_addon
 from src.app.models.barber_service_link import barber_service
 
 from src.app.database import Base
@@ -12,3 +14,5 @@ class Barber(Base):
     role: Mapped[str] = mapped_column(default="barber")
 
     services = relationship("Service", secondary="barber_service", back_populates="barbers")
+
+    addons = relationship("Addon", secondary=barber_addon, back_populates="barbers")
