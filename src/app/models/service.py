@@ -11,4 +11,4 @@ class Service(Base):
     duration: Mapped[int] = mapped_column()
     price: Mapped[int] = mapped_column()
 
-    barbers = relationship("Barber", secondary="barber_service", back_populates="services")
+    barbers = relationship("Barber", secondary=barber_service, back_populates="services")

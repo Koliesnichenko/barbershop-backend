@@ -1,7 +1,9 @@
 from typing import List
 
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from src.app.models.addon import Addon
 from src.app.models.barber import Barber
 from src.app.models.service import Service
 from src.app.schemas.barber import BarberCreate, BarberBase, BarberUpdate
@@ -47,11 +49,41 @@ def assign_services_to_barber(db: Session, barber_id: int, service_ids: List[int
     if not barber:
         return None
 
-    services = db.query(Service).filter(Service.id.in_(service_ids)).all()
-    if len(services) != len(service_ids):
-        return "Some service IDs were not found"
+    existing_ids = {service.id for service in barber.services}
+    new_ids = set(service_ids) - existing_ids
 
-    barber.services = services
+    if not new_ids:
+        return barber
+
+    new_services = db.query(Service).filter(Service.id.in_(new_ids)).all()
+    if len(new_services) != len(new_ids):
+        raise HTTPException(status_code=400, detail="Some service IDs were not found")
+
+    barber.services.extend(new_services)
+
+    db.commit()
+    db.refresh(barber)
+    return barber
+
+
+def assign_addons_to_barber(db: Session, barber_id: int, addon_ids: List[int]):
+    barber = db.query(Barber).filter(Barber.id == barber_id).first()
+    if not barber:
+        return None
+
+    existing_ids = {addon.id for addon in barber.addons}
+    new_ids = set(addon_ids) - existing_ids
+
+    if not new_ids:
+        return barber
+
+    new_addons = db.query(Addon).filter(Addon.id.in_(new_ids)).all()
+
+    if len(new_addons) != len(new_ids):
+        raise HTTPException(status_code=400, detail="Some addon IDs were not found")
+
+    barber.addons.extend(new_addons)
+
     db.commit()
     db.refresh(barber)
     return barber

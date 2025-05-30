@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.app.database import get_db
 from src.app.crud import barber as crud
-from src.app.schemas.barber import BarberCreate, BarberRead, BarberBase, AssignServices, BarberUpdate
+from src.app.schemas.barber import BarberCreate, BarberRead, BarberBase, AssignServices, BarberUpdate, AssignAddons
 from typing import List
 
 router = APIRouter(tags=["Barbers"])
@@ -39,3 +39,10 @@ def assign_services(barber_id: int, payload: AssignServices, db: Session = Depen
         raise HTTPException(status_code=404, detail="Barber not found or invalid service IDs")
     return result
 
+
+@router.post("/{barber_id}/addon", response_model=BarberRead)
+def assign_addons(barber_id: int, payload: AssignAddons, db: Session = Depends(get_db)):
+    result = crud.assign_addons_to_barber(db, barber_id, payload.addons)
+    if not result:
+        raise HTTPException(status_code=404, detail="Barber not found or invalid addon IDs")
+    return result

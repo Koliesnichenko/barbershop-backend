@@ -13,6 +13,6 @@ class Barber(Base):
     avatar_url: Mapped[str] = mapped_column(nullable=True)
     role: Mapped[str] = mapped_column(default="barber")
 
-    services = relationship("Service", secondary="barber_service", back_populates="barbers")
+    services = relationship("Service", secondary=barber_service, back_populates="barbers")
 
     addons = relationship("Addon", secondary=barber_addon, back_populates="barbers")
