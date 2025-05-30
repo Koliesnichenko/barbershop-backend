@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship, mapped_column, Mapped
 from src.app.database import Base
 from src.app.models.appointment_addon_link import appointment_addon
 from src.app.models.barber_addon_link import barber_addon
+from src.app.models import appointment
 
 
 class Addon(Base):
