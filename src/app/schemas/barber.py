@@ -24,6 +24,10 @@ class AssignServices(BaseModel):
     service_ids: List[int]
 
 
+class AssignAddons(BaseModel):
+    addon_ids: List[int]
+
+
 class BarberUpdate(BaseModel):
     name: Optional[str] = None
     avatar_url: Optional[str] = None

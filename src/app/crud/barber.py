@@ -42,11 +42,15 @@ def delete_barber(db: Session, barber_id: int):
     return False
 
 
-def assign_services_to_barber(db: Session, barber_id: int, service_id: List[int]):
+def assign_services_to_barber(db: Session, barber_id: int, service_ids: List[int]):
     barber = db.query(Barber).filter(Barber.id == barber_id).first()
     if not barber:
         return None
-    services = db.query(Service).filter(Service.id.in_(service_id)).all()
+
+    services = db.query(Service).filter(Service.id.in_(service_ids)).all()
+    if len(services) != len(service_ids):
+        return "Some service IDs were not found"
+
     barber.services = services
     db.commit()
     db.refresh(barber)

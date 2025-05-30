@@ -9,7 +9,7 @@ from typing import List
 
 from src.app.models.barber import Barber
 from src.app.models.service import Service
-from src.app.schemas.appointment import AppointmentCreate, AppointmentRead, AppointmentReadDetailed, AppointmentResponse
+from src.app.schemas.appointment import AppointmentCreate, AppointmentReadDetailed, AppointmentResponse
 
 
 router = APIRouter()

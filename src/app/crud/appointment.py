@@ -3,7 +3,8 @@ from typing import List
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from src.app.models.appointment import Appointment, Addon
+from src.app.models.addon import Addon
+from src.app.models.appointment import Appointment
 from src.app.models.service import Service
 from src.app.schemas.appointment import AppointmentCreate
 
