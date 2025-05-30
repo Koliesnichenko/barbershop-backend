@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from src.app.models.appointment import Addon
+from src.app.models.addon import Addon
 from src.app.schemas.addon import AddonCreate, AddonUpdate
 
 
