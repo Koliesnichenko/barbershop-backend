@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union, Optional
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -89,3 +89,31 @@ def assign_addons_to_barber(db: Session, barber_id: int, addon_ids: List[int]):
     return barber
 
 
+def remove_service_from_barber(db: Session, barber_id: int, service_id: int) -> Optional[Barber]:
+    barber = db.query(Barber).filter(Barber.id == barber_id).first()
+    if not barber:
+        return None
+
+    service = next((service for service in barber.services if service.id == service_id), None)
+    if not service:
+        raise HTTPException(status_code=400, detail="Service not assigned to this barber")
+
+    barber.services.remove(service)
+    db.commit()
+    db.refresh(barber)
+    return barber
+
+
+def remove_addon_from_barber(db: Session, barber_id: int, addon_id: int) -> Optional[Barber]:
+    barber = db.query(Barber).filter(Barber.id == barber_id).first()
+    if not barber:
+        return None
+
+    addon = next((addon for addon in barber.addons if addon.id == addon_id), None)
+    if not addon:
+        raise HTTPException(status_code=400, detail="Addon not assigned to this barber")
+
+    barber.addons.remove(addon)
+    db.commit()
+    db.refresh(barber)
+    return barber

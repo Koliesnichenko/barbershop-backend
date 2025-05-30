@@ -46,3 +46,19 @@ def assign_addons(barber_id: int, payload: AssignAddons, db: Session = Depends(g
     if not result:
         raise HTTPException(status_code=404, detail="Barber not found or invalid addon IDs")
     return result
+
+
+@router.delete("/{barber_id}/service/{service_id}", response_model=BarberRead)
+def remove_service(barber_id: int, service_id: int, db: Session = Depends(get_db)):
+    result = crud.remove_service_from_barber(db, barber_id, service_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Invalid service IDs")
+    return result
+
+
+@router.delete("/{barber_id}/addon/{addon_id}", response_model=BarberRead)
+def remove_addon(barber_id: int, addon_id: int, db: Session = Depends(get_db)):
+    result = crud.remove_addon_from_barber(db, barber_id, addon_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Invalid addon IDs")
+    return result
