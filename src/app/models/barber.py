@@ -11,7 +11,6 @@ class Barber(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     name: Mapped[str] = mapped_column()
     avatar_url: Mapped[str] = mapped_column(nullable=True)
-    role: Mapped[str] = mapped_column(default="barber")
 
     services = relationship("Service", secondary=barber_service, back_populates="barbers")
 
