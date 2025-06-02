@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+
+from src.app.auth.dependencies import get_current_user, admin_required
 from src.app.database import get_db
 from src.app.auth.schemas import UserLogin, UserRegister, Token
 from src.app.models.user import User
@@ -32,3 +34,18 @@ def login_user(data: UserLogin, db: Session = Depends(get_db)):
 
     access_token = create_access_token(data={"sub": str(user.id)})
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/me")
+def get_me(current_user: User = Depends(get_current_user)):
+    return {
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email,
+        "role": current_user.role
+    }
+
+
+@router.post("/admin-only")
+def admin_action(current_user: User = Depends(admin_required)):
+    return {"message": f"Welcome, admin {current_user.name}"}

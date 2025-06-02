@@ -17,5 +17,3 @@ class Appointment(Base):
     total_price: Mapped[int] = mapped_column()
 
     addons = relationship("Addon", secondary=appointment_addon, back_populates="appointments")
-
-
