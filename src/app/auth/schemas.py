@@ -1,10 +1,25 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
+from src.app.validators.accounts import validate_password_strength, validate_email
 
 
 class UserRegister(BaseModel):
     name: str
     email: EmailStr
     password: str
+
+    model_config = {
+        "from_attributes": True
+    }
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        return validate_password_strength(value)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        return validate_email(value)
 
 
 class UserLogin(BaseModel):
