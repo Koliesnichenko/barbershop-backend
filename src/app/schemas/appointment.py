@@ -8,8 +8,6 @@ class AppointmentCreate(BaseModel):
     barber_id: int = Field(..., alias="barberId")
     service_id: int = Field(..., alias="serviceId")
     addon_ids: List[int] = Field(..., alias="addonIds")
-    # total_duration: int = Field(..., alias="totalDuration")
-    # total_price: int = Field(..., alias="totalPrice")
 
     model_config = {
         "validate_by_name": True
@@ -43,7 +41,6 @@ class AddonsOut(BaseModel):
     name: str
     duration: int
     price: int
-    category: str
 
     model_config = {
         "from_attributes": True

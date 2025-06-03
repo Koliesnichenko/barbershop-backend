@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from src.app.auth.dependencies import get_current_user, admin_required
 from src.app.database import get_db
-from src.app.auth.schemas import UserLogin, UserRegister, Token
+from src.app.auth.schemas import UserLogin, UserRegister, Token, UserUpdate
 from src.app.models.user import User
 from src.app.auth.security import hash_password, verify_password, create_access_token
 
@@ -20,6 +20,7 @@ def register_user(data: UserRegister, db: Session = Depends(get_db)):
         name=data.name,
         email=data.email,
         hashed_password=hash_password(data.password),
+        phone_number=data.phone_number
     )
     db.add(new_user)
     db.commit()
@@ -42,8 +43,24 @@ def get_me(current_user: User = Depends(get_current_user)):
         "id": current_user.id,
         "name": current_user.name,
         "email": current_user.email,
+        "phone_number": current_user.phone_number,
         "role": current_user.role
     }
+
+
+@router.put("/me")
+def update_user_info(
+        data: UserUpdate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    if data.email:
+        current_user.email = data.email
+    if data.phone_number:
+        current_user.phone_number = data.phone_number
+
+    db.commit()
+    return {"message": "User profile updated"}
 
 
 @router.post("/admin-only")
