@@ -31,3 +31,7 @@ class AssignAddons(BaseModel):
 class BarberUpdate(BaseModel):
     name: Optional[str] = None
     avatar_url: Optional[str] = None
+
+    model_config = {
+        "from_attributes": True
+    }

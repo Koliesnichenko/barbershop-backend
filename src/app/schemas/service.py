@@ -24,8 +24,12 @@ class ServiceRead(ServiceBase):
     }
 
 
-class ServiceUpdate(ServiceBase):
+class ServiceUpdate(BaseModel):
     name: Optional[str] = None
     duration: Optional[int] = None
     price: Optional[int] = None
     category: Optional[str] = None
+
+    model_config = {
+        "from_attributes": True
+    }

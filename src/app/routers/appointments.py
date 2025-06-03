@@ -18,11 +18,12 @@ router = APIRouter()
 @router.post("/", response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
 def create_appointment(appointment: AppointmentCreate, db: Session = Depends(get_db)):
     created = create_appointment_crud(db=db, data=appointment)
-    if not created:
-        raise HTTPException(status_code=400, detail="Invalid service or addon ID")
 
     barber = db.query(Barber).filter(Barber.id == created.barber_id).first()
     service = db.query(Service).filter(Service.id == created.service_id).first()
+
+    if not barber or not service:
+        raise HTTPException(500, "Barber or service not found after creation")
 
     return AppointmentResponse(
         id=created.id,

@@ -42,7 +42,7 @@ def assign_services(barber_id: int, payload: AssignServices, db: Session = Depen
 
 @router.post("/{barber_id}/addon", response_model=BarberRead)
 def assign_addons(barber_id: int, payload: AssignAddons, db: Session = Depends(get_db)):
-    result = crud.assign_addons_to_barber(db, barber_id, payload.addons)
+    result = crud.assign_addons_to_barber(db, barber_id, payload.addon_ids)
     if not result:
         raise HTTPException(status_code=404, detail="Barber not found or invalid addon IDs")
     return result
