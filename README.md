@@ -1,4 +1,4 @@
-# Barbershop Booking Backend API
+# Barbershop Booking Backend API (FastAPI)
 
 Backend for a real barbershop booking system built with:
 
