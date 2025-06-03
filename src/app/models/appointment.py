@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Table
+from datetime import datetime
+
+from sqlalchemy import Column, Integer, String, ForeignKey, Table, func
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from src.app.database import Base
@@ -15,5 +17,9 @@ class Appointment(Base):
     service_id: Mapped[int] = mapped_column()
     total_duration: Mapped[int] = mapped_column()
     total_price: Mapped[int] = mapped_column()
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    user = relationship("User", back_populates="appointments")
+    scheduled_time: Mapped[datetime] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     addons = relationship("Addon", secondary=appointment_addon, back_populates="appointments")
