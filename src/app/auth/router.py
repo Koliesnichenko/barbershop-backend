@@ -54,13 +54,30 @@ def update_user_info(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
-    if data.email:
+    if data.email and data.email != current_user.email:
+        existing_user = db.query(User).filter(User.email == data.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already exist"
+            )
         current_user.email = data.email
+
     if data.phone_number:
         current_user.phone_number = data.phone_number
 
     db.commit()
-    return {"message": "User profile updated"}
+    db.refresh(current_user)
+
+    return {
+        "message": "User profile updated",
+        "user": {
+            "id": current_user.id,
+            "name": current_user.name,
+            "email": current_user.email,
+            "phone_number": current_user.phone_number,
+        }
+    }
 
 
 @router.post("/admin-only")
