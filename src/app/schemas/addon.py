@@ -9,7 +9,6 @@ class AddonBase(BaseModel):
     name: str
     duration: int
     price: int
-    category: str
 
 
 class AddonCreate(AddonBase):
@@ -29,4 +28,3 @@ class AddonUpdate(BaseModel):
     name: Optional[str] = None
     duration: Optional[int] = None
     price: Optional[int] = None
-    category: Optional[str] = None

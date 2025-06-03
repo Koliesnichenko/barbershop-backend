@@ -13,7 +13,6 @@ class Addon(Base):
     name: Mapped[str] = mapped_column()
     duration: Mapped[int] = mapped_column()
     price: Mapped[int] = mapped_column()
-    category: Mapped[str] = mapped_column()
 
     appointments = relationship("Appointment", secondary=appointment_addon, back_populates="addons")
     barbers = relationship("Barber", secondary=barber_addon, back_populates="addons")
