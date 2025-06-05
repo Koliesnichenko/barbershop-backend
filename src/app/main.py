@@ -1,14 +1,20 @@
 from fastapi import FastAPI
+from fastapi.responses import ORJSONResponse
+
 from src.app.routers import barbers, services, appointments, addons
 from src.app.auth.router import router as auth_router
 from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+app = FastAPI(
+    title="Barbershop API",
+    version="1.0.0",
+    default_response_class=ORJSONResponse
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "https://app.example.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -39,11 +45,18 @@ def custom_openapi():
             "bearerFormat": "JWT",
         }
     }
+    public_paths = {
+        "/": ["get"],
+        "/api/auth/login": ["post"],
+        "/api/auth/register": ["post"],
+    }
 
-    for path in openapi_schema["paths"]:
-        for method in openapi_schema["paths"][path]:
-            if "security" not in openapi_schema["paths"][path][method]:
-                openapi_schema["paths"][path][method]["security"] = [{"BearerAuth": []}]
+    for path, path_item in openapi_schema["paths"].items():
+        for method, method_item in path_item.items():
+            if method in public_paths.get(path, []):
+                method_item["security"] = []
+            else:
+                method_item.setdefault("security", [{"BearerAuth": []}])
 
     app.openapi_schema = openapi_schema
     return app.openapi_schema
@@ -55,4 +68,3 @@ app.openapi = custom_openapi
 @app.get("/")
 def root():
     return {"message": "Barbershop backend is working"}
-
