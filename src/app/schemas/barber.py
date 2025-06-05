@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class BarberBase(BaseModel):
@@ -15,9 +15,7 @@ class BarberCreate(BarberBase):
 class BarberRead(BarberBase):
     id: int
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AssignServices(BaseModel):
@@ -32,6 +30,12 @@ class BarberUpdate(BaseModel):
     name: Optional[str] = None
     avatar_url: Optional[str] = None
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BarberOut(BaseModel):
+    id: int
+    name: str
+    avatar_url: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)

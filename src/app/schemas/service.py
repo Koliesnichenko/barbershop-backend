@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from src.app.schemas.barber import BarberRead
 
@@ -19,17 +19,21 @@ class ServiceRead(ServiceBase):
     id: int
     barbers: List[BarberRead] = []
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ServiceUpdate(BaseModel):
     name: Optional[str] = None
     duration: Optional[int] = None
     price: Optional[int] = None
-    category: Optional[str] = None
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ServiceOut(BaseModel):
+    id: int
+    name: str
+    duration: int
+    price: int
+
+    model_config = ConfigDict(from_attributes=True)
