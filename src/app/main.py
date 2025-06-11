@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 
-from src.app.routers import barbers, services, appointments, addons
+from src.app.routers import barbers, services, appointments, addons, timeslots
 from src.app.auth.router import router as auth_router
 from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +25,7 @@ app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
 app.include_router(services.router, prefix="/api/services", tags=["Services"])
 app.include_router(barbers.router, prefix="/api/barbers", tags=["Barbers"])
 app.include_router(addons.router, prefix="/api/addons", tags=["Addons"])
+app.include_router(timeslots.router, prefix="/api/timeslots", tags=["Timeslots"])
 
 
 def custom_openapi():
