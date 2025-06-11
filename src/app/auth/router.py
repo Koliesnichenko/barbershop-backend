@@ -49,7 +49,7 @@ def login_user(data: UserLogin, db: Session = Depends(get_db)):
     }
 
 
-@router.post("/me")
+@router.get("/me")
 def get_me(current_user: User = Depends(get_current_user)):
     return {
         "id": current_user.id,
