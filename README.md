@@ -64,7 +64,7 @@ alembic upgrade head
     ```
     Follow the prompts to enter the admin's email, name, phone number (optional), and password. This user will have the `admin` role required for management endpoints.
 
-### 7.  **Seed Initial Data (Optional)**
+### 7.  **Seed Initial Data**
 
     You can populate your database with some initial barbers, services, and addons for testing purposes.
 
