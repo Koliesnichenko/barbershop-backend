@@ -1,12 +1,17 @@
 from typing import List, Union, Optional
 
 from fastapi import HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.app.models.addon import Addon
 from src.app.models.barber import Barber
+from src.app.models.barber_schedule import BarberSchedule
+from src.app.models.barber_unavailable_time import BarberUnavailableTime
 from src.app.models.service import Service
 from src.app.schemas.barber import BarberCreate, BarberBase, BarberUpdate
+from src.app.schemas.barber_schedule import BarberScheduleCreate, BarberScheduleUpdate, BarberUnavailableTimeCreate, \
+    BarberUnavailableTimeUpdate
 
 
 def create_barber(db: Session, barber: BarberCreate):
@@ -25,7 +30,11 @@ def get_barber(db: Session, barber_id: int):
     return db.query(Barber).filter(Barber.id == barber_id).first()
 
 
-def update_barber(db: Session, barber_id: int, updated_data: BarberUpdate):
+def update_barber(
+        db: Session,
+        barber_id: int,
+        updated_data: BarberUpdate
+):
     barber = get_barber(db, barber_id)
     if barber:
         for key, value in updated_data.model_dump().items():
@@ -44,7 +53,11 @@ def delete_barber(db: Session, barber_id: int):
     return False
 
 
-def assign_services_to_barber(db: Session, barber_id: int, service_ids: List[int]):
+def assign_services_to_barber(
+        db: Session,
+        barber_id: int,
+        service_ids: List[int]
+):
     barber = db.query(Barber).filter(Barber.id == barber_id).first()
     if not barber:
         return None
@@ -66,7 +79,11 @@ def assign_services_to_barber(db: Session, barber_id: int, service_ids: List[int
     return barber
 
 
-def assign_addons_to_barber(db: Session, barber_id: int, addon_ids: List[int]):
+def assign_addons_to_barber(
+        db: Session,
+        barber_id: int,
+        addon_ids: List[int]
+):
     barber = db.query(Barber).filter(Barber.id == barber_id).first()
     if not barber:
         return None
@@ -89,7 +106,10 @@ def assign_addons_to_barber(db: Session, barber_id: int, addon_ids: List[int]):
     return barber
 
 
-def remove_service_from_barber(db: Session, barber_id: int, service_id: int) -> Optional[Barber]:
+def remove_service_from_barber(
+        db: Session, barber_id: int,
+        service_id: int
+) -> Optional[Barber]:
     barber = db.query(Barber).filter(Barber.id == barber_id).first()
     if not barber:
         return None
@@ -104,7 +124,11 @@ def remove_service_from_barber(db: Session, barber_id: int, service_id: int) -> 
     return barber
 
 
-def remove_addon_from_barber(db: Session, barber_id: int, addon_id: int) -> Optional[Barber]:
+def remove_addon_from_barber(
+        db: Session,
+        barber_id: int,
+        addon_id: int
+) -> Optional[Barber]:
     barber = db.query(Barber).filter(Barber.id == barber_id).first()
     if not barber:
         return None
@@ -117,3 +141,102 @@ def remove_addon_from_barber(db: Session, barber_id: int, addon_id: int) -> Opti
     db.commit()
     db.refresh(barber)
     return barber
+
+
+# CRUD for BarberSchedule
+def create_barber_schedule(
+        db: Session,
+        barber_id: int,
+        schedule_data: BarberScheduleCreate
+) -> BarberSchedule:
+    """Creates a new regular schedule entry for a specific barber."""
+    db_schedule = BarberSchedule(**schedule_data.model_dump(), barber_id=barber_id)
+    db.add(db_schedule)
+    db.commit()
+    db.refresh(db_schedule)
+    return db_schedule
+
+
+def get_barber_schedules(db: Session, barber_id: int) -> list[BarberSchedule]:
+    """Retrieves all regular schedule entries for a specific barber."""
+    return db.scalars(
+        select(BarberSchedule).where(BarberSchedule.barber_id  == barber_id)
+    ).all()
+
+
+def get_barber_schedule_by_id(db: Session,  schedule_id: int) -> BarberSchedule | None:
+    """Retrieves a specific regular schedule entry by its ID."""
+    return db.get(BarberSchedule, schedule_id)
+
+
+def update_barber_schedule(db: Session, schedule_id: int, schedule_data: BarberScheduleUpdate) -> BarberSchedule | None:
+    """Updates an existing regular schedule entry."""
+    db_schedule = db.get(BarberSchedule, schedule_id)
+    if db_schedule:
+        for key, value in schedule_data.model_dump(exclude_unset=True).items():
+            setattr(db_schedule, key, value)
+        db.add(db_schedule)
+        db.commit()
+        db.refresh(db_schedule)
+        return db_schedule
+
+
+def delete_barber_schedule(db: Session, schedule_id: int) -> bool:
+    """Deletes a regular schedule entry."""
+    db_schedule = db.get(BarberSchedule, schedule_id)
+    if db_schedule:
+        db.delete(db_schedule)
+        db.commit()
+        return True
+    return False
+
+
+# CRUD for BarberUnavailableTime
+def create_barber_unavailable_time(db: Session, barber_id: int, unavailable_data: BarberUnavailableTimeCreate) -> BarberUnavailableTime:
+    """Creates a new unavailable time entry for a specific barber."""
+    db_unavailable_time = BarberUnavailableTime(**unavailable_data.model_dump(), barber_id=barber_id)
+    db.add(db_unavailable_time)
+    db.commit()
+    db.refresh(db_unavailable_time)
+    return db_unavailable_time
+
+
+def get_barber_unavailable_times(db: Session, barber_id: int) -> list[BarberUnavailableTime]:
+    """Retrieves all unavailable time entries for a specific barber."""
+    return db.scalars(
+        select(BarberUnavailableTime).where(BarberUnavailableTime.barber_id == barber_id)
+    ).all()
+
+
+def get_barber_unavailable_time_by_id(db: Session, unavailable_time_id: int) -> BarberUnavailableTime | None:
+    """Retrieves a specific unavailable time entry by its ID."""
+    return db.get(BarberUnavailableTime, unavailable_time_id)
+
+
+def update_barber_unavailable_time(
+        db: Session,
+        unavailable_time_id: int,
+        unavailable_data: BarberUnavailableTimeUpdate
+) -> BarberUnavailableTime | None:
+    """Updates an existing unavailable time entry."""
+    db_unavailable_time = db.get(BarberUnavailableTime, unavailable_time_id)
+    if db_unavailable_time:
+        for key, value in unavailable_data.model_dump(exclude_unset=True).items():
+            setattr(db_unavailable_time, key, value)
+        db.add(db_unavailable_time)
+        db.commit()
+        db.refresh(db_unavailable_time)
+    return db_unavailable_time
+
+
+def delete_barber_unavailable_time(
+        db: Session,
+        unavailable_time_id: int
+) -> bool:
+    """Deletes an unavailable time entry."""
+    db_unavailable_time = db.get(BarberUnavailableTime, unavailable_time_id)
+    if db_unavailable_time:
+        db.delete(db_unavailable_time)
+        db.commit()
+        return True
+    return False
