@@ -1,4 +1,4 @@
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import List
 
 from fastapi import HTTPException
@@ -41,22 +41,28 @@ def get_available_timeslots(
     service_duration_minutes = service.duration
     service_duration = timedelta(minutes=service_duration_minutes)
 
-    working_start_datetime = datetime.combine(target_date, working_start_time)
-    working_end_datetime = datetime.combine(target_date, working_end_time)
+    working_start_datetime_utc = datetime.combine(target_date, working_start_time).replace(tzinfo=timezone.utc)
+    working_end_datetime_utc = datetime.combine(target_date, working_end_time).replace(tzinfo=timezone.utc)
+
+    start_of_day_utc = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+    end_of_day_utc = datetime.combine(target_date, datetime.max.time()).replace(tzinfo=timezone.utc)
 
     existing_appointments = db.scalars(
         select(Appointment)
         .where(Appointment.barber_id == barber_id)
-        .where(Appointment.scheduled_time >= datetime.combine(target_date, datetime.min.time()))
-        .where(Appointment.scheduled_time < datetime.combine(target_date, datetime.min.time()) + timedelta(days=1))
+        .where(Appointment.scheduled_time >= start_of_day_utc)
+        .where(Appointment.scheduled_time < end_of_day_utc + timedelta(microseconds=1))
     ).all()
 
     booked_intervals = []
 
     for appt in existing_appointments:
+        start_utc = appt.scheduled_time.astimezone(timezone.utc)\
+            if appt.scheduled_time.tzinfo else appt.scheduled_time.replace(tzinfo=timezone.utc)
+        end_utc = start_utc + timedelta(minutes=appt.total_duration)
         booked_intervals.append({
-            "start": appt.scheduled_time,
-            "end": appt.scheduled_time + timedelta(minutes=appt.total_duration)
+            "start": end_utc,
+            "end": end_utc
         })
 
     unavailable_intervals_db = db.scalars(
@@ -70,9 +76,14 @@ def get_available_timeslots(
     ).all()
 
     for unavail_time in unavailable_intervals_db:
+        start_utc = unavail_time.start_time.astimezone(
+            timezone.utc) if unavail_time.start_time.tzinfo else unavail_time.start_time.replace(tzinfo=timezone.utc)
+        end_utc = unavail_time.end_time.astimezone(
+            timezone.utc) if unavail_time.end_time.tzinfo else unavail_time.end_time.replace(tzinfo=timezone.utc)
+
         booked_intervals.append({
-            "start": unavail_time.start_time,
-            "end": unavail_time.end_time
+            "start": start_utc,
+            "end": end_utc
         })
 
     booked_intervals.sort(key=lambda x: x["start"])
@@ -90,13 +101,12 @@ def get_available_timeslots(
         merged_booked_intervals.append(current_merged)
 
     available_slots = []
-    current_slot_start = working_start_datetime
+    current_slot_start = working_start_datetime_utc
     start_minute = current_slot_start.minute
     if start_minute % slot_interval_minutes != 0:
         current_slot_start += timedelta(minutes=(slot_interval_minutes - (start_minute % slot_interval_minutes)))
-        current_slot_start = current_slot_start.replace(second=0, microsecond=0)  # Clear seconds/micros
-
-    while current_slot_start + service_duration <= working_end_datetime:
+        current_slot_start = current_slot_start.replace(second=0, microsecond=0)
+    while current_slot_start + service_duration <= working_end_datetime_utc:
         potential_slot_end = current_slot_start + service_duration
         is_available = True
 
