@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from src.app.schemas.barber import BarberOut
 from src.app.schemas.service import ServiceOut
+from src.app.models.appointment import AppointmentStatus
 
 
 class AppointmentCreate(BaseModel):
@@ -28,6 +29,7 @@ class AppointmentRead(BaseModel):
     total_price: int
     scheduled_time: datetime
     user_id: int
+    status: AppointmentStatus
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -40,6 +42,7 @@ class AppointmentList(BaseModel):
     service_id: int
     total_duration: int
     total_price: int
+    status: AppointmentStatus
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -62,6 +65,7 @@ class AppointmentReadDetailed(BaseModel):
     total_duration: int
     total_price: int
     addons: List[AddonsOut]
+    status: AppointmentStatus
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -78,6 +82,7 @@ class AppointmentResponse(BaseModel):
     total_price: int
     scheduled_time: datetime
     created_at: datetime
+    status: AppointmentStatus
 
     service: ServiceOut
     barber: BarberOut
@@ -110,8 +115,5 @@ class AppointmentShortUserView(BaseModel):
     scheduled_date: str
     scheduled_time: str
     total_price: int
+    status: AppointmentStatus
 
-
-class AppointmentGroupedUserView(BaseModel):
-    upcoming: List[AppointmentShortUserView]
-    completed: List[AppointmentShortUserView]
