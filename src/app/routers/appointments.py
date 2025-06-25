@@ -10,12 +10,12 @@ from src.app.crud.appointment import create_appointment as create_appointment_cr
 
 from typing import List
 
-from src.app.models.appointment import Appointment
+from src.app.models.appointment import Appointment, AppointmentStatus
 from src.app.models.barber import Barber
 from src.app.models.service import Service
 from src.app.models.user import User
 from src.app.schemas.appointment import AppointmentCreate, AppointmentReadDetailed, AppointmentResponse, \
-    AppointmentGroupedUserView, AppointmentShortUserView, AddonsOut
+    AppointmentShortUserView, AddonsOut
 
 router = APIRouter()
 
@@ -45,7 +45,7 @@ def get_appointments_by_barber(
 
 
 @router.delete("/{appointment_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_appointment(
+def cancel_appointment(
         appointment_id: int,
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
@@ -57,11 +57,39 @@ def delete_appointment(
     if appointment.user_id != current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="You can't delete this appointment")
 
-    db.delete(appointment)
+    if appointment.status == AppointmentStatus.cancelled:
+        raise HTTPException(status_code=400, detail="Appointment is already cancelled")
+
+    appointment.status = AppointmentStatus.cancelled
     db.commit()
+    db.refresh(appointment)
+
+    return {"message": "Appointment cancelled successfully", "status": appointment.status}
 
 
-@router.get("/me", response_model=AppointmentGroupedUserView)
+@router.post("/{appointment_id}/complete", status_code=status.HTTP_200_OK)
+def complete_appointment(
+        appointment_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(admin_required)
+):
+    appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+
+    if appointment.status == AppointmentStatus.completed:
+        raise HTTPException(status_code=400, detail="Appointment is already completed")
+    if appointment.status == AppointmentStatus.cancelled:
+        raise HTTPException(status_code=400, detail="Cannot complete a cancelled appointment")
+
+    appointment.status = AppointmentStatus.completed
+    db.commit()
+    db.refresh(appointment)
+
+    return {"message": "Appointment marked as completed", "status": appointment.status}
+
+
+@router.get("/me", response_model=List[AppointmentShortUserView])
 def get_user_appointments(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
@@ -76,11 +104,12 @@ def get_user_appointments(
             joinedload(Appointment.addons),
             joinedload(Appointment.barber)
         )
+        .order_by(Appointment.scheduled_time.asc())
         .all()
     )
 
     def to_short_view(a: Appointment) -> AppointmentShortUserView:
-        start = a.scheduled_time or datetime.now(UTC)
+        start = a.scheduled_time
 
         end = start + timedelta(minutes=a.total_duration)
 
@@ -95,13 +124,8 @@ def get_user_appointments(
             scheduled_day=start.strftime("%A"),
             scheduled_date=start.strftime("%d.%m.%Y"),
             scheduled_time=f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')}",
-            total_price=a.total_price
+            total_price=a.total_price,
+            status=a.status
         )
 
-    upcoming = [to_short_view(a) for a in appointments if a.scheduled_time > now]
-    completed = [to_short_view(a) for a in appointments if a.scheduled_time <= now]
-
-    return {
-        "upcoming": upcoming,
-        "completed": completed
-    }
+    return [to_short_view(a) for a in appointments]
