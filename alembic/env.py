@@ -10,7 +10,7 @@ from alembic import context
 from src.app.database import Base
 
 from src.app.models.addon import Addon
-from src.app.models.appointment import Appointment
+from src.app.models.appointment import Appointment, AppointmentStatus
 from src.app.models import user
 from src.app.models.barber import Barber
 from src.app.models.service import Service
