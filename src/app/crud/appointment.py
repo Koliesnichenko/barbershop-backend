@@ -27,6 +27,7 @@ def create_appointment(db: Session, data: AppointmentCreate, user_id: int) -> Ap
 
     total_price = service.price + sum(addon.price for addon in addons)
     total_duration = service.duration + sum(addon.duration for addon in addons)
+
     appointment_model = Appointment(
         name=data.name,
         phone_number=data.phone_number,

@@ -1,11 +1,12 @@
 from datetime import datetime, date, timedelta, timezone
-from typing import List
+from typing import List, Optional
 
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.app.models.appointment import Appointment
+from src.app.models.addon import Addon
+from src.app.models.appointment import Appointment, AppointmentStatus
 from src.app.models.barber_schedule import BarberSchedule
 from src.app.models.barber_unavailable_time import BarberUnavailableTime
 from src.app.models.service import Service
@@ -16,6 +17,7 @@ def get_available_timeslots(
         barber_id: int,
         target_date: date,
         service_id: int,
+        addon_ids: Optional[List[int]] = None,
         slot_interval_minutes: int = 15,
 ) -> List[datetime]:
     if slot_interval_minutes <= 0 or 60 % slot_interval_minutes != 0:
@@ -38,20 +40,31 @@ def get_available_timeslots(
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
 
-    service_duration_minutes = service.duration
-    service_duration = timedelta(minutes=service_duration_minutes)
+    total_duration_required_minutes = service.duration
+
+    if addon_ids:
+        addons = db.query(Addon).filter(Addon.id.in_(addon_ids)).all()
+        if len(addons) != len(addon_ids):
+            raise HTTPException(
+                status_code=400,
+                detail="Some addon IDs not found for timeslot calculation"
+            )
+        total_duration_required_minutes += sum(addon.duration for addon in addons)
+
+    service_duration = timedelta(minutes=total_duration_required_minutes)
 
     working_start_datetime_utc = datetime.combine(target_date, working_start_time).replace(tzinfo=timezone.utc)
     working_end_datetime_utc = datetime.combine(target_date, working_end_time).replace(tzinfo=timezone.utc)
 
-    start_of_day_utc = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
-    end_of_day_utc = datetime.combine(target_date, datetime.max.time()).replace(tzinfo=timezone.utc)
+    start_of_day_for_query = working_start_datetime_utc.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_day_for_query = start_of_day_for_query + timedelta(days=1)
 
     existing_appointments = db.scalars(
         select(Appointment)
         .where(Appointment.barber_id == barber_id)
-        .where(Appointment.scheduled_time >= start_of_day_utc)
-        .where(Appointment.scheduled_time < end_of_day_utc + timedelta(microseconds=1))
+        .where(Appointment.scheduled_time >= start_of_day_for_query)
+        .where(Appointment.scheduled_time <= end_of_day_for_query)
+        .where(Appointment.status != AppointmentStatus.cancelled)
     ).all()
 
     booked_intervals = []
@@ -68,11 +81,8 @@ def get_available_timeslots(
     unavailable_intervals_db = db.scalars(
         select(BarberUnavailableTime)
         .where(BarberUnavailableTime.barber_id == barber_id)
-        .where(BarberUnavailableTime.start_time >= datetime.combine(
-            target_date,
-            datetime.min.time()))
-        .where(
-            BarberUnavailableTime.start_time < datetime.combine(target_date, datetime.min.time()) + timedelta(days=1))
+        .where(BarberUnavailableTime.start_time >= start_of_day_for_query)
+        .where(BarberUnavailableTime.start_time < end_of_day_for_query)
     ).all()
 
     for unavail_time in unavailable_intervals_db:
@@ -102,10 +112,13 @@ def get_available_timeslots(
 
     available_slots = []
     current_slot_start = working_start_datetime_utc
+
     start_minute = current_slot_start.minute
     if start_minute % slot_interval_minutes != 0:
-        current_slot_start += timedelta(minutes=(slot_interval_minutes - (start_minute % slot_interval_minutes)))
+        minutes_to_add = slot_interval_minutes - (start_minute % slot_interval_minutes)
+        current_slot_start += timedelta(minutes=minutes_to_add)
         current_slot_start = current_slot_start.replace(second=0, microsecond=0)
+
     while current_slot_start + service_duration <= working_end_datetime_utc:
         potential_slot_end = current_slot_start + service_duration
         is_available = True

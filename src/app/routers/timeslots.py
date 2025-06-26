@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Query, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -19,6 +19,10 @@ def get_barber_available_timeslots(
         barber_id: int,
         target_date: date = Query(..., description="Date for which to get available timeslots (YYYY-MM-DD)."),
         service_id: int = Query(..., description="ID of the service to book (determines duration)."),
+        addon_ids: Optional[List[int]] = Query(
+            None,
+            description="List of addon IDs to include in duration. Optional"
+        ),
         slot_interval_minutes: int = Query(
             15, ge=5, le=60, description="Granularity of slots in minutes (e.g., 15, 30)."),
         db: Session = Depends(get_db),
@@ -42,6 +46,7 @@ def get_barber_available_timeslots(
             barber_id=barber_id,
             target_date=target_date,
             service_id=service_id,
+            addon_ids=addon_ids,
             slot_interval_minutes=slot_interval_minutes
         )
         return available_slots
