@@ -1,3 +1,10 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+print("DEBUG from main.py: DATABASE_URL =", os.getenv("DATABASE_URL"))
+
+from src.app.core.config import settings
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 
