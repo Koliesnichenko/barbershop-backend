@@ -1,23 +1,47 @@
 import os
 from dotenv import load_dotenv
+from starlette.concurrency import run_in_threadpool
 
 load_dotenv()
 print("DEBUG from main.py: DATABASE_URL =", os.getenv("DATABASE_URL"))
 
+from fastapi.openapi.utils import get_openapi
+from fastapi.middleware.cors import CORSMiddleware
 from src.app.core.config import settings
+
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 
+from src.app.core.redis_client import get_redis_client, close_redis_connection_pool
+
 from src.app.routers import barbers, services, appointments, addons, timeslots
 from src.app.auth.router import router as auth_router
-from fastapi.openapi.utils import get_openapi
-from fastapi.middleware.cors import CORSMiddleware
+
+import logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
 
 app = FastAPI(
     title="Barbershop API",
     version="1.0.0",
     default_response_class=ORJSONResponse
 )
+
+
+@app.on_event("startup")
+def startup_event():
+    logger.debug("Application startup event triggered.")
+    get_redis_client()
+    logger.debug("Redis client initialized.")
+
+
+@app.on_event("shutdown")
+def shutdown_event():
+    print("DEBUG: Application shutdown event triggered.")
+    close_redis_connection_pool()
+    print("DEBUG: Redis client connection closed.")
+
 
 origins = [
     "http://localhost",
