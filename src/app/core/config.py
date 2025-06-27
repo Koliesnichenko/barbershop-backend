@@ -1,4 +1,3 @@
-
 from typing import List
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -19,7 +18,6 @@ class Settings(BaseSettings):
     Settings are loaded from environment variables, including from the .env file.
     """
 
-
     DATABASE_URL: str = Field(..., alias="DATABASE_URL", description="URL for PostgreSQL database connection")
     SECRET_KEY: str = Field(..., alias="SECRET_KEY", description="Secret key for signing JWT tokens")
 
@@ -27,10 +25,12 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    REDIS_URL: str = Field("redis://localhost:6379/0", alias="REDIS_URL", description="URL for Redis connection")
+
     # CORS settings
     # Pydantic-settings
     CORS_ORIGINS_RAW: str = Field(
-        "http://localhost,http://localhost:3000",
+        "http://localhost,http://localhost:3000,http://192.168.10.188:3000/,http://172.31.48.1:3000/",
         alias="CORS_ORIGINS",
         description="Comma-separated allowed domains for CORS in .env"
     )
