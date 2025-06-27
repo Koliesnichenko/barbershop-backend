@@ -1,6 +1,3 @@
-import os
-
-from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
@@ -10,10 +7,6 @@ from src.app.database import get_db
 from src.app.models.user import User
 
 import logging
-
-load_dotenv()
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = "HS256"
 
 # oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 security = HTTPBearer()
