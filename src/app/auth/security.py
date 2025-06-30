@@ -3,9 +3,6 @@ from jose import jwt, JWTError
 from datetime import datetime, timedelta, UTC
 
 from src.app.core.config import settings
-from dotenv import load_dotenv
-
-import os
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -31,6 +28,36 @@ def create_access_token(user_id: int, expires_delta: timedelta | None = None):
 def decode_access_token(token: str):
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        return payload
+    except JWTError:
+        return None
+
+
+def create_password_reset_token(user_id: int) -> str:
+    """
+    Create a JWT token for password reset.
+    Token content user_id and short LLT
+    """
+    to_encode = {
+        "sub": str(user_id)
+    }
+    expires_delta = timedelta(minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(UTC) + expires_delta
+    to_encode.update({"exp": expire})
+
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def decode_password_reset_token(token: str) -> dict | None:
+    """
+    decode JWT token for password reset
+    return None, if token is invalid or expired
+    """
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
         return payload
     except JWTError:
         return None
