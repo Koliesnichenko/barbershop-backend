@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     DATABASE_URL: str = Field(..., alias="DATABASE_URL", description="URL for PostgreSQL database connection")
     SECRET_KEY: str = Field(..., alias="SECRET_KEY", description="Secret key for signing JWT tokens")
 
+    # EMAIL_SMTP_SERVER: str = Field("smtp.yourdomain.com", description="SMTP server")
+    # EMAIL_SMTP_PORT: int = Field(587, description="SMTP port")
+    # EMAIL_USERNAME: str = Field(..., description="SMTP username")
+    # EMAIL_PASSWORD: str = Field(..., description="SMTP password")
+    # EMAIL_FROM: str = Field("noreply@yourdomain.com", description="From email address")
+
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -34,6 +40,9 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS",
         description="Comma-separated allowed domains for CORS in .env"
     )
+
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 15
+    FRONTEND_URL: str = "http://localhost:3000"  # for reset send frontend
 
     @computed_field
     @property
