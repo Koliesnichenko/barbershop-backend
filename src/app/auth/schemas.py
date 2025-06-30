@@ -69,4 +69,4 @@ class PasswordResetConfirm(BaseModel):
 
 
 class PasswordResetResponse(BaseModel):
-    message: str
+    message: str = "If a user with this email exists, a password reset link will be sent."

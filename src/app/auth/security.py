@@ -35,13 +35,13 @@ def decode_access_token(token: str):
 
 def create_password_reset_token(user_id: int) -> str:
     """
-    Create a JWT token for password reset.
-    Token content user_id and short LLT
+    Creates a JWT token for password reset.
+    The token will contain user_id and have a short expiration time.
     """
     to_encode = {
         "sub": str(user_id)
     }
-    expires_delta = timedelta(minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTE)
+    expires_delta = timedelta(minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES)
     expire = datetime.now(UTC) + expires_delta
     to_encode.update({"exp": expire})
 
@@ -50,8 +50,8 @@ def create_password_reset_token(user_id: int) -> str:
 
 def decode_password_reset_token(token: str) -> dict | None:
     """
-    decode JWT token for password reset
-    return None, if token is invalid or expired
+    Decodes the JWT password reset token and returns the payload.
+    Returns None if the token is invalid or expired.
     """
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])

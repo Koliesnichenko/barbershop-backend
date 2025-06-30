@@ -5,13 +5,16 @@ from sqlalchemy.orm import Session
 from datetime import datetime, UTC
 from src.app.auth.dependencies import get_current_user, admin_required
 from src.app.database import get_db
-from starlette.concurrency import run_in_threadpool
-from src.app.auth.schemas import UserLogin, UserRegister, Token, UserUpdate
+
+from src.app.auth.schemas import UserLogin, UserRegister, Token, UserUpdate, PasswordResetRequest, PasswordResetConfirm, PasswordResetResponse, UserEmail
 from src.app.models.user import User
 from src.app.core.config import settings
 from src.app.core.redis_client import get_redis_db
-from src.app.auth.security import hash_password, verify_password, create_access_token, decode_access_token
+from src.app.auth.security import hash_password, verify_password, create_access_token, decode_access_token, \
+    create_password_reset_token, decode_password_reset_token
 import logging
+
+from src.app.services.email_service import send_password_reset_email
 
 router = APIRouter(tags=["Auth"])
 
@@ -144,3 +147,85 @@ def logout(
     logger.info(f"User {current_user.email} (id={current_user.id}) logged out. Token added to blacklist.")
 
     return {"message": "Successfully logged out."}
+
+
+@router.post("/request-password-reset", response_model=PasswordResetResponse, status_code=status.HTTP_200_OK)
+def request_password_reset(
+        request: PasswordResetRequest,
+        db: Session = Depends(get_db),
+        redis_client: redis.Redis = Depends(get_redis_db)
+):
+    """
+    Request a password reset for the user.
+    Sends a password reset link to the spec email.
+    """
+    user = db.query(User).filter_by(email=request.email).first()
+
+    if user:
+        reset_token = create_password_reset_token(user.id)
+
+        send_password_reset_email(
+            email_to=user.email,
+            token=reset_token,
+            frontend_url=settings.FRONTEND_URL
+        )
+        logger.info(f"Password reset email (simulated) sent to {user.email}")
+    else:
+        logger.warning(f"Password reset requested  for non-existent email: {request.email}")
+
+    return PasswordResetResponse()
+
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+def reset_password(
+        data: PasswordResetConfirm,
+        db: Session = Depends(get_db),
+        redis_client: redis.Redis = Depends(get_redis_db)
+):
+    """
+    Reset the users password using a reset token
+    """
+    payload = decode_password_reset_token(data.token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset link"
+        )
+
+    user_id = payload.get("sub")
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid password reset link"
+        )
+
+    blacklist_key = f"reset_blacklist:{data.token}"
+    is_blacklisted = redis_client.get(blacklist_key)
+    if is_blacklisted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password reset link has already been used or revoked."
+        )
+
+    user = db.query(User).filter_by(id=user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    user.hashed_password = hash_password(data.new_password)
+    db.commit()
+    db.refresh(user)
+
+    exp_timestamp = payload.get("exp")
+    if exp_timestamp:
+        token_exp_utc = datetime.fromtimestamp(exp_timestamp, tz=UTC)
+        current_utc = datetime.now(UTC)
+        ttl = (token_exp_utc - current_utc).total_seconds()
+        if ttl > 0:
+            redis_client.setex(blacklist_key, int(ttl), "used")
+    else:
+        redis_client.setex(blacklist_key, settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES * 60, "used")
+
+    logger.info(f"Password successfully reset for user: {user.email}")
+    return {"message": "Password reset successful"}
