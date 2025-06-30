@@ -41,7 +41,7 @@ def create_password_reset_token(user_id: int) -> str:
     to_encode = {
         "sub": str(user_id)
     }
-    expires_delta = timedelta(minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES)
+    expires_delta = timedelta(minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTE)
     expire = datetime.now(UTC) + expires_delta
     to_encode.update({"exp": expire})
 

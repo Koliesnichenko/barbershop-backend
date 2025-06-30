@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, Field
 from src.app.validators.accounts import validate_password_strength, validate_email
 
 
@@ -48,3 +48,25 @@ class UserUpdate(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+
+class UserEmail(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        return validate_password_strength(value)
+
+
+class PasswordResetResponse(BaseModel):
+    message: str
