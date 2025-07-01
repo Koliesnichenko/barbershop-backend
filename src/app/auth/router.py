@@ -14,7 +14,7 @@ from src.app.auth.security import hash_password, verify_password, create_access_
     create_password_reset_token, decode_password_reset_token
 import logging
 
-from src.app.services.email_service import send_password_reset_email
+from src.app.services.email_service import send_password_reset_email, send_registration_email
 
 router = APIRouter(tags=["Auth"])
 
@@ -38,6 +38,13 @@ def register_user(data: UserRegister, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     logger.info(f"User registered successfully: {new_user.email} (id={new_user.id})")
+
+    try:
+        send_registration_email(new_user.email, new_user.name, settings.FRONTEND_URL)
+        logger.info(f"Registration email sent to {new_user.email}")
+    except Exception as e:
+        logger.error(f"Failed to send registration email to {new_user.email}: {e}")
+
     return {"message": "User created", "user_id": new_user.id}
 
 
@@ -164,14 +171,11 @@ def request_password_reset(
     if user:
         reset_token = create_password_reset_token(user.id)
 
-        send_password_reset_email(
-            email_to=user.email,
-            token=reset_token,
-            frontend_url=settings.FRONTEND_URL
-        )
-        logger.info(f"Password reset email (simulated) sent to {user.email}")
-    else:
-        logger.warning(f"Password reset requested  for non-existent email: {request.email}")
+        try:
+            send_password_reset_email(user.email, reset_token, settings.FRONTEND_URL)
+            logger.info(f"Password reset email sent to {user.email}")
+        except Exception as e:
+            logger.error(f"Failed to send password reset email to {user.email}: {e}")
 
     return PasswordResetResponse()
 

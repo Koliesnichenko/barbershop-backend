@@ -18,8 +18,21 @@ from src.app.routers import barbers, services, appointments, addons, timeslots
 from src.app.auth.router import router as auth_router
 
 import logging
+import sys
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s:%(name)s:%(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
+logging.getLogger("src.app.services.email_service").propagate = False
+logging.getLogger("src.app.auth.router").propagate = False
+
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 
 app = FastAPI(
@@ -38,9 +51,9 @@ def startup_event():
 
 @app.on_event("shutdown")
 def shutdown_event():
-    print("DEBUG: Application shutdown event triggered.")
+    logger.info("DEBUG: Application shutdown event triggered.")
     close_redis_connection_pool()
-    print("DEBUG: Redis client connection closed.")
+    logger.info("DEBUG: Redis client connection closed.")
 
 
 origins = [
