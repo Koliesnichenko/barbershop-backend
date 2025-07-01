@@ -1,6 +1,8 @@
 import logging
 import smtplib
 import ssl
+from email.mime.multipart import MIMEMultipart
+
 from src.app.core.config import settings
 from email.mime.text import MIMEText
 
@@ -16,7 +18,7 @@ def _send_email(email_to: str, subject: str, body: str):
     try:
         msg = MIMEText(body, "html", "utf-8")
         msg["Subject"] = subject
-        msg["From"] = f"{settings.EMAIL_NAME} <{settings.EMAIL_SENDER_ADDRESS}>"
+        msg["From"] = f"{settings.EMAIL_SENDER_NAME} <{settings.EMAIL_SENDER_ADDRESS}>"
         msg["To"] = email_to
 
         context = ssl.create_default_context()
@@ -44,11 +46,11 @@ def send_password_reset_email(email_to: str, token: str, frontend_url: str) -> N
 
     reset_link = f"{frontend_url}/reset-password?token={token}"
     subject = "Password Reset for BarberShop"
-    body = f"""\
+    body = f"""
     <html>
       <body>
         <p>Hello,</p>
-        <p>You reqeust to reset your password for your BarberShop account.
+        <p>You requested to reset your password for your BarberShop account.
          Please click the following link to reset your password:</p>
         <p><a href="{reset_link}">Reset your password here</a></p>
         <p>This link will expire in {settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES} minutes.</p>
@@ -66,7 +68,7 @@ def send_registration_email(email_to: str, user_name: str, frontend_url: str):
     sending email after successful registration
     """
     subject = "Welcome to BarberShop"
-    body = f"""\
+    body = f"""
     <html>
       <body>
         <p>Hello, {user_name}</p>
@@ -79,4 +81,3 @@ def send_registration_email(email_to: str, user_name: str, frontend_url: str):
     """
 
     _send_email(email_to, subject, body)
-
