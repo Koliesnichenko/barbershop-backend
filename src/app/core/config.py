@@ -21,11 +21,12 @@ class Settings(BaseSettings):
     DATABASE_URL: str = Field(..., alias="DATABASE_URL", description="URL for PostgreSQL database connection")
     SECRET_KEY: str = Field(..., alias="SECRET_KEY", description="Secret key for signing JWT tokens")
 
-    # EMAIL_SMTP_SERVER: str = Field("smtp.yourdomain.com", description="SMTP server")
-    # EMAIL_SMTP_PORT: int = Field(587, description="SMTP port")
-    # EMAIL_USERNAME: str = Field(..., description="SMTP username")
-    # EMAIL_PASSWORD: str = Field(..., description="SMTP password")
-    # EMAIL_FROM: str = Field("noreply@yourdomain.com", description="From email address")
+    SMTP_HOST: str = Field(..., description="SMTP server host")
+    SMTP_PORT: int = Field(587, description="SMTP server port")
+    SMTP_USERNAME: str = Field(..., description="SMTP username (your sender email address)")
+    SMTP_PASSWORD: str = Field(..., description="SMTP password or app-specific password")
+    EMAIL_SENDER_ADDRESS: str = Field(..., description="SMTP sender address")
+    EMAIL_SENDER_NAME: str = Field("BarberShop App", description="SMTP name displayed as sender")
 
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
