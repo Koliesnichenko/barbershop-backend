@@ -28,6 +28,7 @@ class Appointment(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     scheduled_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    scheduled_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     status: Mapped[AppointmentStatus] = mapped_column(
         Enum(AppointmentStatus, name="appointmentstatus"),
