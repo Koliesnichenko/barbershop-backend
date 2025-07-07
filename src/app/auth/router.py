@@ -14,7 +14,8 @@ from src.app.auth.security import hash_password, verify_password, create_access_
     create_password_reset_token, decode_password_reset_token
 import logging
 
-from src.app.services.email_service import send_password_reset_email, send_registration_email
+from src.app.services.email_service import send_password_reset_email, send_registration_email, \
+    generate_and_send_verification_code
 
 router = APIRouter(tags=["Auth"])
 
@@ -37,6 +38,8 @@ def register_user(data: UserRegister, db: Session = Depends(get_db)):
     )
     db.add(new_user)
     db.commit()
+    db.refresh(new_user)
+
     logger.info(f"User registered successfully: {new_user.email} (id={new_user.id})")
 
     try:
@@ -44,6 +47,15 @@ def register_user(data: UserRegister, db: Session = Depends(get_db)):
         logger.info(f"Registration email sent to {new_user.email}")
     except Exception as e:
         logger.error(f"Failed to send registration email to {new_user.email}: {e}")
+
+    try:
+        generate_and_send_verification_code(
+            db=db,
+            user=new_user
+        )
+        logger.info(f"Verification code sent to {new_user.email}")
+    except Exception as e:
+        logger.error(f"Failed to send verification code to {new_user.email}: {e}")
 
     return {"message": "User created", "user_id": new_user.id}
 

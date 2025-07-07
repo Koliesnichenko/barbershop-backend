@@ -1,11 +1,16 @@
 import logging
+import random
 import smtplib
 import ssl
+from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
+
+from sqlalchemy.orm import Session
 
 from src.app.core.config import settings
 from email.mime.text import MIMEText
 
+from src.app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -81,3 +86,30 @@ def send_registration_email(email_to: str, user_name: str, frontend_url: str):
     """
 
     _send_email(email_to, subject, body)
+
+
+def generate_and_send_verification_code(db: Session, user: User):
+    code = str(random.randint(10 ** (settings.EMAIL_VERIFICATION_CODE_LENGTH - 1),
+                              10 ** settings.EMAIL_VERIFICATION_CODE_LENGTH - 1))
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.EMAIL_VERIFICATION_CODE_EXPIRE_MINUTES)
+
+    user.verification_code = code
+    user.verification_code_expires_at = expires_at
+    db.commit()
+    db.refresh(user)
+
+    subject = "Email Verification Code"
+    body = f"""
+    <html>
+    <body>
+        <p>Hi, {user.name}!</p>
+        <p>Your verification code is: <strong>{code}</strong></p>
+        <p>This code will expire in {settings.EMAIL_VERIFICATION_CODE_EXPIRE_MINUTES} minutes.</p>
+        <p>Best regards,<br>The BarberShop Team</p>
+    </body>
+    </html>
+    """
+
+    _send_email(user.email, subject, body)
+
+
