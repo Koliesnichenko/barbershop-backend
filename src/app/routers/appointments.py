@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from src.app import crud
 from src.app.auth.dependencies import get_current_user, admin_required
 from src.app.database import get_db
-from src.app.crud.appointment import create_appointment as create_appointment_crud, get_appointment_by_barber
+from src.app.crud.appointment import get_appointment_by_barber
 
 from typing import List
 
