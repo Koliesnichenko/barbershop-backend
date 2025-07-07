@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, UTC, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -16,6 +17,9 @@ from src.app.models.service import Service
 from src.app.models.user import User
 from src.app.schemas.appointment import AppointmentCreate, AppointmentReadDetailed, AppointmentResponse, \
     AppointmentShortUserView, AddonsOut
+from src.app.services.timeslot_generator import create_appointment_with_checks
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -26,8 +30,9 @@ def create_appointment(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
-    created_appointment = create_appointment_crud(db=db, data=appointment, user_id=current_user.id)
+    created_appointment = create_appointment_with_checks(db=db, data=appointment, user_id=current_user.id)
 
+    logger.info(f"API: Appointment ID {created_appointment.id} successfully processed for user {current_user.id}.")
     return created_appointment
 
 
