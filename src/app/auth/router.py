@@ -2,11 +2,12 @@ import redis
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timezone
 from src.app.auth.dependencies import get_current_user, admin_required
 from src.app.database import get_db
 
-from src.app.auth.schemas import UserLogin, UserRegister, Token, UserUpdate, PasswordResetRequest, PasswordResetConfirm, PasswordResetResponse, UserEmail
+from src.app.auth.schemas import UserLogin, UserRegister, Token, UserUpdate, PasswordResetRequest, PasswordResetConfirm, \
+    PasswordResetResponse, UserEmail, EmailVerificationRequest
 from src.app.models.user import User
 from src.app.core.config import settings
 from src.app.core.redis_client import get_redis_db
@@ -20,6 +21,13 @@ from src.app.services.email_service import send_password_reset_email, send_regis
 router = APIRouter(tags=["Auth"])
 
 logger = logging.getLogger(__name__)
+
+
+def _get_user_or_404(db: Session, email: str) -> User:
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 
 @router.post("/register", status_code=201)
@@ -43,12 +51,6 @@ def register_user(data: UserRegister, db: Session = Depends(get_db)):
     logger.info(f"User registered successfully: {new_user.email} (id={new_user.id})")
 
     try:
-        send_registration_email(new_user.email, new_user.name, settings.FRONTEND_URL)
-        logger.info(f"Registration email sent to {new_user.email}")
-    except Exception as e:
-        logger.error(f"Failed to send registration email to {new_user.email}: {e}")
-
-    try:
         generate_and_send_verification_code(
             db=db,
             user=new_user
@@ -60,12 +62,68 @@ def register_user(data: UserRegister, db: Session = Depends(get_db)):
     return {"message": "User created", "user_id": new_user.id}
 
 
+@router.post("/verify-email", summary="email code confirmation")
+def verify_email(
+        data: EmailVerificationRequest,
+        db: Session = Depends(get_db)
+):
+    """
+    Check code confirmation and send verification code
+    """
+    user = _user = _get_user_or_404(db, data.email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.is_verified:
+        return {"message": "Email already verified"}
+
+    if user.verification_code != data.code:
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+
+    if not user.verification_code_expires_at or datetime.now(timezone.utc) > user.verification_code_expires_at:
+        raise HTTPException(status_code=400, detail="Verification code expired")
+
+    user.is_verified = True
+    user.verification_code = None
+    user.verification_code_expires_at = None
+    db.commit()
+
+    try:
+        send_registration_email(user.email, user.name, settings.FRONTEND_URL)
+        logger.info(f"Registration email sent to {user.email}")
+    except Exception as e:
+        logger.error(f"Failed to send registration email to {user.email}: {e}")
+
+    return {"message": "Email verified successfully"}
+
+
+@router.post("/resend-verification-code")
+def resend_verification(
+    data: UserEmail,
+    db: Session = Depends(get_db)
+):
+    user = _get_user_or_404(db, data.email)
+
+    if user.is_verified:
+        return {"message": "Email already verified"}
+
+    generate_and_send_verification_code(db=db, user=user)
+
+    return {"message": "Verification code resent"}
+
+
 @router.post("/login", response_model=Token)
 def login_user(data: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter_by(email=data.email).first()
     if not user or not verify_password(data.password, user.hashed_password):
         logger.warning(f"Login failed for: {data.email}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.email} is not verified"
+        )
 
     token = create_access_token(user.id)
     logger.info(f"Login successful: {user.email} (id={user.id})")
