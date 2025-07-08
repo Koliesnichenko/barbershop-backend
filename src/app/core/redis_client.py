@@ -1,6 +1,8 @@
+from datetime import timedelta
+
 import redis
 from src.app.core.config import settings
-from typing import Generator
+from typing import Generator, Optional
 
 import logging
 
@@ -47,3 +49,44 @@ def close_redis_connection_pool():
         _redis_client.close()
         _redis_client = None
         logger.debug("Redis connection closed.")
+
+
+def save_refresh_token(
+        redis_client: redis.Redis,
+        user_id: int,
+        refresh_token: str,
+        expires_delta: timedelta
+):
+    """
+    Save Redis refresh token
+    key: f"refresh_token_{user_id}"
+    value: refresh_token
+    TTL: expires_delta (in seconds)
+    """
+    key = f"refresh_token_{user_id}"
+    redis_client.setex(key, int(expires_delta.total_seconds()), refresh_token)
+    logger.debug(f"Refresh token for user {user_id} saved in Redis.")
+
+
+def get_refresh_token(
+        redis_client: redis.Redis,
+        user_id: int
+) -> Optional[str]:
+    """
+    Get Redis refresh token
+    """
+    key = f"refresh_token_{user_id}"
+    token_value = redis_client.get(key)
+    return token_value
+
+
+def delete_refresh_token(
+        redis_client: redis.Redis,
+        user_id: int
+):
+    """
+    Delete Redis refresh token
+    """
+    key = f"refresh_token_{user_id}"
+    redis_client.delete(key)
+    logger.debug(f"Refresh token for user {user_id} deleted from Redis.")
