@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     EMAIL_SENDER_ADDRESS: str = Field(..., description="SMTP sender address")
     EMAIL_SENDER_NAME: str = Field("BarberShop App", description="SMTP name displayed as sender")
 
+    EMAIL_VERIFICATION_CODE_EXPIRE_MINUTES: int = 10
+    EMAIL_VERIFICATION_CODE_LENGTH: int = 6
+
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
