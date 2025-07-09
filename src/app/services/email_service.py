@@ -5,11 +5,14 @@ import ssl
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 
+from src.app.schemas.appointment import AppointmentShortUserView, AppointmentShortUserView
+
 from sqlalchemy.orm import Session
 
 from src.app.core.config import settings
 from email.mime.text import MIMEText
 
+from src.app.models.appointment import AppointmentStatus
 from src.app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -113,3 +116,77 @@ def generate_and_send_verification_code(db: Session, user: User):
     _send_email(user.email, subject, body)
 
 
+def send_booking_confirmation_email(
+        email_to: str,
+        user_name: str,
+        scheduled_day: str,
+        scheduled_date: str,
+        scheduled_time: str,
+        barber_name: str,
+        service_title: str,
+        total_price: int,
+        total_duration: int,
+        status: str,
+        frontend_url: str
+) -> None:
+    subject = "Booking Confirmation"
+    body = f"""
+    <html>
+    <body>
+        <p>Hello, {user_name}</p>
+        <p>Your appointment has been confirmed:</p>
+        <ul>
+            <li><strong>Date:</strong> {scheduled_day}, {scheduled_date}</li>
+            <li><strong>Time:</strong> {scheduled_time}</li>
+            <li><strong>Barber:</strong> {barber_name}</li>
+            <li><strong>Service:</strong> {service_title}</li>
+            <li><strong>Price:</strong> {total_price}</li>
+            <li><strong>Duration: </strong> {total_duration}</li>
+            <li><strong>Status</strong> {status}</li>
+            <li><strong>Our website:</strong> {frontend_url}</li>
+        </ul>
+        <p>See you soon!</p>
+        <p><a href="{frontend_url}">Visit our website</a></p>
+    </body>
+    </html>
+    """
+
+    _send_email(email_to, subject, body)
+
+
+def send_booking_cancellation_email(
+        email_to: str,
+        user_name: str,
+        scheduled_day: str,
+        scheduled_date: str,
+        scheduled_time: str,
+        barber_name: str,
+        service_title: str,
+        total_price: int,
+        total_duration: int,
+        status: str,
+        frontend_url: str
+) -> None:
+    subject = "Booking Confirmation"
+    body = f"""
+    <html>
+    <body>
+        <p>Hello, {user_name}</p>
+        <p>Your booking has been cancelled:</p>
+        <ul>
+            <li><strong>Date:</strong> {scheduled_day}, {scheduled_date}</li>
+            <li><strong>Time:</strong> {scheduled_time}</li>
+            <li><strong>Barber:</strong> {barber_name}</li>
+            <li><strong>Service:</strong> {service_title}</li>
+            <li><strong>Price:</strong> {total_price}</li>
+            <li><strong>Duration: </strong> {total_duration}</li>
+            <li><strong>Status</strong> {status}</li>
+            <li><strong>Our website:</strong> {frontend_url}</li>
+        </ul>
+        <p>If this was a mistake, you can rebook anytime.</p>
+        <p><a href="{frontend_url}">Visit our website</a></p>
+    </body>
+    </html>
+    """
+
+    _send_email(email_to, subject, body)

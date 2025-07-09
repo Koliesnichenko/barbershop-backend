@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from src.app import crud
 from src.app.auth.dependencies import get_current_user, admin_required
+from src.app.core.config import settings
 from src.app.database import get_db
 from src.app.crud.appointment import get_appointment_by_barber
 
@@ -17,6 +18,7 @@ from src.app.models.service import Service
 from src.app.models.user import User
 from src.app.schemas.appointment import AppointmentCreate, AppointmentReadDetailed, AppointmentResponse, \
     AppointmentShortUserView, AddonsOut
+from src.app.services.email_service import send_booking_confirmation_email, send_booking_cancellation_email
 from src.app.services.timeslot_generator import create_appointment_with_checks
 
 logger = logging.getLogger(__name__)
@@ -30,7 +32,30 @@ def create_appointment(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
-    created_appointment = create_appointment_with_checks(db=db, data=appointment, user_id=current_user.id)
+    created_appointment = create_appointment_with_checks(
+        db=db,
+        data=appointment,
+        user_id=current_user.id
+    )
+
+    scheduled_datetime = created_appointment.scheduled_time
+    scheduled_day = scheduled_datetime.strftime("%A")
+    scheduled_date = scheduled_datetime.strftime("%Y-%m-%d")
+    scheduled_time = scheduled_datetime.strftime("%H:%M")
+
+    send_booking_confirmation_email(
+        email_to=current_user.email,
+        user_name=current_user.name,
+        scheduled_day=scheduled_day,
+        scheduled_date=scheduled_date,
+        scheduled_time=scheduled_time,
+        barber_name=created_appointment.barber.name,
+        service_title=AppointmentResponse.model_validate(created_appointment).full_service_title,
+        total_price=created_appointment.total_price,
+        total_duration=created_appointment.total_duration,
+        status=created_appointment.status.value,
+        frontend_url=settings.FRONTEND_URL
+    )
 
     logger.info(f"API: Appointment ID {created_appointment.id} successfully processed for user {current_user.id}.")
     return created_appointment
@@ -68,6 +93,25 @@ def cancel_appointment(
     appointment.status = AppointmentStatus.cancelled
     db.commit()
     db.refresh(appointment)
+
+    scheduled_datetime = appointment.scheduled_time
+    scheduled_day = scheduled_datetime.strftime("%A")
+    scheduled_date = scheduled_datetime.strftime("%Y-%m-%d")
+    scheduled_time = scheduled_datetime.strftime("%H:%M")
+
+    send_booking_cancellation_email(
+        email_to=current_user.email,
+        user_name=current_user.name,
+        scheduled_day=scheduled_day,
+        scheduled_date=scheduled_date,
+        scheduled_time=scheduled_time,
+        barber_name=appointment.barber.name,
+        service_title=AppointmentResponse.model_validate(appointment).full_service_title,
+        total_price=appointment.total_price,
+        total_duration=appointment.total_duration,
+        status=appointment.status.value,
+        frontend_url=settings.FRONTEND_URL
+    )
 
     return {"message": "Appointment cancelled successfully", "status": appointment.status}
 
