@@ -9,6 +9,7 @@ from src.app.auth.dependencies import get_current_user, admin_required
 from src.app.core.config import settings
 from src.app.database import get_db
 from src.app.crud.appointment import get_appointment_by_barber
+from src.app.tasks import send_reminder_email
 
 from typing import List
 
@@ -55,6 +56,21 @@ def create_appointment(
         total_duration=created_appointment.total_duration,
         status=created_appointment.status.value,
         frontend_url=settings.FRONTEND_URL
+    )
+
+    reminder = appointment.scheduled_time - timedelta(hours=1)
+    if reminder > datetime.now(timezone.utc):
+        send_reminder_email.apply_async(...)
+    else:
+        logger.warning("Reminder time already passed, skipping scheduling reminder email.")
+
+    send_reminder_email.apply_async(
+        args=[
+            current_user.email,
+            "Upcoming appointment reminder",
+            f"Hi {current_user.name}!, this is reminder about your appointment at {scheduled_time}."
+        ],
+        eta=reminder
     )
 
     logger.info(f"API: Appointment ID {created_appointment.id} successfully processed for user {current_user.id}.")
