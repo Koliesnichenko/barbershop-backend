@@ -62,6 +62,12 @@ def get_available_timeslots(
     working_start_datetime_utc = datetime.combine(target_date, working_start_time).replace(tzinfo=timezone.utc)
     working_end_datetime_utc = datetime.combine(target_date, working_end_time).replace(tzinfo=timezone.utc)
 
+    now_utc = datetime.now(timezone.utc)
+    if target_date == now_utc.date():
+        min_start_datetime = now_utc
+    else:
+        min_start_datetime = working_start_datetime_utc
+
     start_of_day_for_query = working_start_datetime_utc.replace(hour=0, minute=0, second=0, microsecond=0)
     end_of_day_for_query = start_of_day_for_query + timedelta(days=1)
 
@@ -117,7 +123,7 @@ def get_available_timeslots(
         merged_booked_intervals.append(current_merged)
 
     available_slots = []
-    current_slot_start = working_start_datetime_utc
+    current_slot_start = min_start_datetime
 
     start_minute = current_slot_start.minute
     if start_minute % slot_interval_minutes != 0:
