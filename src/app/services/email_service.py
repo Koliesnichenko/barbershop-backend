@@ -167,7 +167,7 @@ def send_booking_cancellation_email(
         status: str,
         frontend_url: str
 ) -> None:
-    subject = "Booking Confirmation"
+    subject = "Booking Cancellation"
     body = f"""
     <html>
     <body>
