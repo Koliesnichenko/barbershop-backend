@@ -6,7 +6,7 @@ celery_app = Celery(
     "barbershop_celery_app",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
-    include=['src.app.tasks']
+    include=["src.app.tasks"]
 )
 
 celery_app.conf.update(

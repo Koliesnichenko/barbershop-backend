@@ -18,7 +18,7 @@ from src.app.models.user import User
 logger = logging.getLogger(__name__)
 
 
-def _send_email(email_to: str, subject: str, body: str):
+def send_email(email_to: str, subject: str, body: str):
     """
     inner function for sending email
     """
@@ -68,7 +68,7 @@ def send_password_reset_email(email_to: str, token: str, frontend_url: str) -> N
     </html>
     """
     
-    _send_email(email_to, subject, body)
+    send_email(email_to, subject, body)
 
 
 def send_registration_email(email_to: str, user_name: str, frontend_url: str):
@@ -88,7 +88,7 @@ def send_registration_email(email_to: str, user_name: str, frontend_url: str):
     </html>
     """
 
-    _send_email(email_to, subject, body)
+    send_email(email_to, subject, body)
 
 
 def generate_and_send_verification_code(db: Session, user: User):
@@ -113,7 +113,7 @@ def generate_and_send_verification_code(db: Session, user: User):
     </html>
     """
 
-    _send_email(user.email, subject, body)
+    send_email(user.email, subject, body)
 
 
 def send_booking_confirmation_email(
@@ -151,7 +151,7 @@ def send_booking_confirmation_email(
     </html>
     """
 
-    _send_email(email_to, subject, body)
+    send_email(email_to, subject, body)
 
 
 def send_booking_cancellation_email(
@@ -189,4 +189,4 @@ def send_booking_cancellation_email(
     </html>
     """
 
-    _send_email(email_to, subject, body)
+    send_email(email_to, subject, body)

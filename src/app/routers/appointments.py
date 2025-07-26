@@ -9,7 +9,7 @@ from src.app.auth.dependencies import get_current_user, admin_required
 from src.app.core.config import settings
 from src.app.database import get_db
 from src.app.crud.appointment import get_appointment_by_barber
-from src.app.tasks import send_reminder_email
+from src.app.tasks.email import send_email
 
 from typing import List
 
