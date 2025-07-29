@@ -1,0 +1,399 @@
+import redis
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError
+from sqlalchemy.orm import Session
+from datetime import datetime, UTC, timezone, timedelta
+from src.app.auth.dependencies import get_current_user, admin_required
+from src.app.database import get_db
+
+from src.app.auth.schemas import UserLogin, UserRegister, Token, UserUpdate, PasswordResetRequest, PasswordResetConfirm, \
+    PasswordResetResponse, UserEmail, EmailVerificationRequest, RefreshTokenRequest
+from src.app.models.user import User
+from src.app.core.config import settings
+from src.app.core.redis_client import get_redis_db, get_refresh_token, delete_refresh_token, save_refresh_token
+from src.app.auth.security import hash_password, verify_password, create_access_token, decode_access_token, \
+    create_password_reset_token, decode_password_reset_token, create_refresh_token, decode_refresh_token
+import logging
+
+from src.app.services.email_service import send_password_reset_email, send_registration_email, \
+    generate_and_send_verification_code
+
+router = APIRouter(tags=["Auth"])
+
+logger = logging.getLogger(__name__)
+
+
+def _get_user_or_404(db: Session, email: str) -> User:
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+@router.post("/register", status_code=201)
+def register_user(data: UserRegister, db: Session = Depends(get_db)):
+    existing = db.query(User).filter_by(email=data.email).first()
+    if existing:
+        logger.warning(f"Registration failed: user already exists - {data.email}")
+        raise HTTPException(status_code=400, detail="User already exists")
+
+    new_user = User(
+        name=data.name,
+        email=data.email,
+        hashed_password=hash_password(data.password),
+        phone_number=data.phone_number,
+        role="user"
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    logger.info(f"User registered successfully: {new_user.email} (id={new_user.id})")
+
+    try:
+        generate_and_send_verification_code(
+            db=db,
+            user=new_user
+        )
+        logger.info(f"Verification code sent to {new_user.email}")
+    except Exception as e:
+        logger.error(f"Failed to send verification code to {new_user.email}: {e}")
+
+    return {"message": "User created", "user_id": new_user.id}
+
+
+@router.post("/verify-email", summary="email code confirmation")
+def verify_email(
+        data: EmailVerificationRequest,
+        db: Session = Depends(get_db)
+):
+    """
+    Check code confirmation and send verification code
+    """
+    user = _user = _get_user_or_404(db, data.email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.is_verified:
+        return {"message": "Email already verified"}
+
+    if user.verification_code != data.code:
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+
+    if not user.verification_code_expires_at or datetime.now(timezone.utc) > user.verification_code_expires_at:
+        raise HTTPException(status_code=400, detail="Verification code expired")
+
+    user.is_verified = True
+    user.verification_code = None
+    user.verification_code_expires_at = None
+    db.commit()
+
+    try:
+        send_registration_email(user.email, user.name, settings.FRONTEND_URL)
+        logger.info(f"Registration email sent to {user.email}")
+    except Exception as e:
+        logger.error(f"Failed to send registration email to {user.email}: {e}")
+
+    return {"message": "Email verified successfully"}
+
+
+@router.post("/resend-verification-code")
+def resend_verification(
+    data: UserEmail,
+    db: Session = Depends(get_db)
+):
+    user = _get_user_or_404(db, data.email)
+
+    if user.is_verified:
+        return {"message": "Email already verified"}
+
+    generate_and_send_verification_code(db=db, user=user)
+
+    return {"message": "Verification code resent"}
+
+
+@router.post("/login", response_model=Token)
+def login_user(
+        data: UserLogin,
+        db: Session = Depends(get_db),
+        redis_db: redis.Redis = Depends(get_redis_db)
+):
+    user = db.query(User).filter_by(email=data.email).first()
+    if not user or not verify_password(data.password, user.hashed_password):
+        logger.warning(f"Login failed for: {data.email}")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.email} is not verified"
+        )
+
+    token = create_access_token(user.id)
+    refresh_token = create_refresh_token(user.id)
+    refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+
+    save_refresh_token(
+        redis_client=redis_db,
+        user_id=user.id,
+        refresh_token=refresh_token,
+        expires_delta=refresh_token_expires
+    )
+
+    logger.info(f"Login successful: {user.email} (id={user.id})")
+    return {
+        "access_token": token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer"
+    }
+
+
+@router.post("/refresh-token", response_model=Token)
+def refresh_tokens(
+        data: RefreshTokenRequest,
+        db: Session = Depends(get_db),
+        redis_db: redis.Redis = Depends(get_redis_db)
+):
+    refresh_token = data.refresh_token
+
+    try:
+        payload = decode_refresh_token(refresh_token)
+        if not payload:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired refresh token"
+            )
+        user_id_str = payload.get("sub")
+        if user_id_str is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token payload"
+            )
+        try:
+            user_id = int(user_id_str)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid user id in token"
+            )
+
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
+
+        logger.info(f"refresh_token provided: {refresh_token}")
+        stored_token = get_refresh_token(redis_db, user.id)
+        logger.info(f"stored_token in Redis: {stored_token}")
+        if stored_token != refresh_token:
+            delete_refresh_token(redis_db, user.id)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token revoked or invalid. Please login again."
+            )
+
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        new_access_token = create_access_token(
+            user_id=user.id,
+            expires_delta=access_token_expires
+        )
+
+        refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        new_refresh_token = create_refresh_token(
+            user_id=user.id,
+            expires_delta=refresh_token_expires
+        )
+
+        save_refresh_token(
+            redis_client=redis_db,
+            user_id=user.id,
+            refresh_token=new_refresh_token,
+            expires_delta=refresh_token_expires
+        )
+
+        return {
+            "access_token": new_access_token,
+            "refresh_token": new_refresh_token,
+            "token_type": "bearer"
+        }
+
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
+
+
+@router.get("/me")
+def get_me(current_user: User = Depends(get_current_user)):
+    return {
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email,
+        "phone_number": current_user.phone_number,
+        "role": current_user.role
+    }
+
+
+@router.put("/me")
+def update_user_info(
+        data: UserUpdate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+
+    if data.email and data.email != current_user.email:
+        existing_user = db.query(User).filter(User.email == data.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already exist"
+            )
+        current_user.email = data.email
+
+    if data.phone_number:
+        current_user.phone_number = data.phone_number
+
+    db.commit()
+    db.refresh(current_user)
+
+    return {
+        "message": "User profile updated",
+        "user": {
+            "id": current_user.id,
+            "name": current_user.name,
+            "email": current_user.email,
+            "phone_number": current_user.phone_number,
+        }
+    }
+
+
+@router.post("/admin-only")
+def admin_action(current_user: User = Depends(admin_required)):
+    return {"message": f"Welcome, admin {current_user.name}"}
+
+
+@router.get("/test-auth")
+def test(current_user: User = Depends(get_current_user)):
+    return {"id": current_user.id, "email": current_user.email}
+
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+def logout(
+        current_user: User = Depends(get_current_user),
+        credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
+        redis_client: redis.Redis = Depends(get_redis_db)
+):
+    token = credentials.credentials
+    payload = decode_access_token(token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid token"
+        )
+
+    exp_timestamp = payload.get("exp")
+    if not exp_timestamp:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid token payload: missing 'exp' claim",
+        )
+
+    current_utc = datetime.now(UTC)
+    token_exp_utc = datetime.fromtimestamp(exp_timestamp, tz=UTC)
+
+    if current_utc >= token_exp_utc:
+        return {"message": "Token already expired, no need to logout."}
+
+    ttl = (token_exp_utc - current_utc).total_seconds()
+
+    redis_client.setex(
+        f"blacklist:{token}",
+        int(ttl),
+        "revoked"
+    )
+    logger.info(f"User {current_user.email} (id={current_user.id}) logged out. Token added to blacklist.")
+
+    return {"message": "Successfully logged out."}
+
+
+@router.post("/request-password-reset", response_model=PasswordResetResponse, status_code=status.HTTP_200_OK)
+def request_password_reset(
+        request: PasswordResetRequest,
+        db: Session = Depends(get_db),
+        redis_client: redis.Redis = Depends(get_redis_db)
+):
+    """
+    Request a password reset for the user.
+    Sends a password reset link to the spec email.
+    """
+    user = db.query(User).filter_by(email=request.email).first()
+
+    if user:
+        reset_token = create_password_reset_token(user.id)
+
+        try:
+            send_password_reset_email(user.email, reset_token, settings.FRONTEND_URL)
+            logger.info(f"Password reset email sent to {user.email}")
+        except Exception as e:
+            logger.error(f"Failed to send password reset email to {user.email}: {e}")
+
+    return PasswordResetResponse()
+
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+def reset_password(
+        data: PasswordResetConfirm,
+        db: Session = Depends(get_db),
+        redis_client: redis.Redis = Depends(get_redis_db)
+):
+    """
+    Reset the users password using a reset token
+    """
+    payload = decode_password_reset_token(data.token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset link"
+        )
+
+    user_id = payload.get("sub")
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid password reset link"
+        )
+
+    blacklist_key = f"reset_blacklist:{data.token}"
+    is_blacklisted = redis_client.get(blacklist_key)
+    if is_blacklisted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password reset link has already been used or revoked."
+        )
+
+    user = db.query(User).filter_by(id=user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    user.hashed_password = hash_password(data.new_password)
+    db.commit()
+    db.refresh(user)
+
+    exp_timestamp = payload.get("exp")
+    if exp_timestamp:
+        token_exp_utc = datetime.fromtimestamp(exp_timestamp, tz=UTC)
+        current_utc = datetime.now(UTC)
+        ttl = (token_exp_utc - current_utc).total_seconds()
+        if ttl > 0:
+            redis_client.setex(blacklist_key, int(ttl), "used")
+    else:
+        redis_client.setex(blacklist_key, settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES * 60, "used")
+
+    logger.info(f"Password successfully reset for user: {user.email}")
+    return {"message": "Password reset successful"}

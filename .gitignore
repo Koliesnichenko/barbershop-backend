@@ -1,0 +1,9 @@
+# Python
+.idea
+.venv
+.pytest_cache/
+__pycache__/
+
+# Venv
+venv/
+.env
