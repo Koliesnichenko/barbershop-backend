@@ -44,6 +44,10 @@ app = FastAPI(
 
 @app.on_event("startup")
 def startup_event():
+    if settings.TESTING:
+        logger.info("TESTING mode: Redis initialization skipped")
+        return
+
     logger.debug("Application startup event triggered.")
     get_redis_client()
     logger.debug("Redis client initialized.")

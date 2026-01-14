@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 15
     FRONTEND_URL: str = "http://localhost:3000"  # for reset send frontend
 
+    TESTING: bool = False
+
     @computed_field
     @property
     def CORS_ORIGINS(self) -> List[str]:

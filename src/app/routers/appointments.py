@@ -48,37 +48,21 @@ def create_appointment(
     scheduled_date = scheduled_datetime.strftime("%Y-%m-%d")
     scheduled_time_str = scheduled_datetime.strftime("%H:%M")
 
-    send_booking_confirmation_email(
-        email_to=current_user.email,
-        user_name=current_user.name,
-        scheduled_day=scheduled_day,
-        scheduled_date=scheduled_date,
-        scheduled_time=scheduled_time_str,
-        barber_name=created_appointment.barber.name,
-        service_title=AppointmentResponse.model_validate(created_appointment).full_service_title,
-        total_price=created_appointment.total_price,
-        total_duration=created_appointment.total_duration,
-        status=created_appointment.status.value,
-        frontend_url=settings.FRONTEND_URL
-    )
-
-    reminder = scheduled_datetime - timedelta(minutes=10)
-
-    if reminder > datetime.now(timezone.utc):
-        send_reminder_email.apply_async(
-            args=[
-                current_user.email,
-                "Upcoming appointment reminder",
-                f"Hi {current_user.name}!, this is reminder about your appointment at {scheduled_time_str}."
-            ],
-            eta=reminder
+    if not settings.TESTING:
+        send_booking_confirmation_email(
+            email_to=current_user.email,
+            user_name=current_user.name,
+            scheduled_day=scheduled_day,
+            scheduled_date=scheduled_date,
+            scheduled_time=scheduled_time_str,
+            barber_name=created_appointment.barber.name,
+            service_title=AppointmentResponse.model_validate(created_appointment).full_service_title,
+            total_price=created_appointment.total_price,
+            total_duration=created_appointment.total_duration,
+            status=created_appointment.status.value,
+            frontend_url=settings.FRONTEND_URL
         )
-        logger.info(f"Scheduled reminder email for appointment ID {created_appointment.id} at {reminder}.")
-    else:
-        logger.warning(f"Reminder time ({reminder}) for appointment ID {created_appointment.id} "
-                       f"already passed ({datetime.now(timezone.utc)}), skipping scheduling reminder email.")
 
-    logger.info(f"API: Appointment ID {created_appointment.id} successfully processed for user {current_user.id}.")
     return created_appointment
 
 
